@@ -61,19 +61,25 @@ ALTER TABLE strkds
 ADD COLUMN hnr integer default 0,
 ADD COLUMN adz text default NULL;
 
+-- insert strkds to hauskds
+-- the order of columns must align with that in hauskds!!!
+INSERT INTO hauskds
+SELECT str, hnr, adz, postplz, postonm, kreis, regbez, land, ostwert,nordwert 
+FROM strkds;
 
--- merge hauskds and strkds
-CREATE TABLE hauskds_full AS (
-SELECT * FROM hauskds 
-  NATURAL FULL OUTER JOIN strkds
-  ORDER BY str,hnr
-);
 
--- delete sub tables
-DROP TABLE hauskds,strkds;
+-- -- merge hauskds and strkds
+-- CREATE TABLE hauskds_full AS (
+-- SELECT * FROM hauskds 
+--   NATURAL FULL OUTER JOIN strkds
+--   ORDER BY str,hnr
+-- );
+
+-- -- delete sub tables
+-- DROP TABLE hauskds,strkds;
 
 -- rename hauskds_full to hauskds
-ALTER TABLE hauskds_full RENAME TO hauskds;
+-- ALTER TABLE hauskds_full RENAME TO hauskds;
 
 -- -- Display the first rows of a data table
 -- SELECT * FROM hauskds LIMIT 10;

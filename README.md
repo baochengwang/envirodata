@@ -15,9 +15,9 @@ This is the script repository to build up a geocoding service based on PostgreSQ
 
 ### Useful `psql` commands
 
-- __run `.sql` script from `bash`__:  `psql -U $USER -d hks -a -f pgd_reader.sql`
-	`hks` is the postgresql database where hauskoordinaten data are stored.
-
+- __run `.sql` script from `bash`__:  `psql -U $USER -d hks -a -f pgd_reader.sql`;
+    - `hks` is the postgresql database where hauskoordinaten data are stored.
+    - `pgd_reader.sql` file reads Hauskoordinaten csv data and convert it to psql data table. 
 
 ### How to start `flask` locally
 
