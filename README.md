@@ -22,7 +22,19 @@ This is the script repository to build up a geocoding service based on PostgreSQ
 ### How to start `flask` locally
 
 - `flask` is installed under the `mamba` environment `autogis` in `zsh`. 
-- run `zsh; mamba activate autogis; flask`
+- run `zsh; mamba activate autogis;`
+- `flask -A [geocoding python script, e.g., geocoder.py] run`;
+- OR define the environment variable `FLASK_APP` using `export FLASK_APP=geocoder.py`, then run `flask run`
+
+
+### How to test REAT API
+#### Insomnia GUI
+- install [Insomnia](https://insomnia.rest/) to test REST API.
+
+#### In terminal.
+- via `curl` in bash:
+    - `curl -X GET -H 'Content-Type: application/json' -d '{"str": "Grafngerstr.","ort": "Moosach","hnr": "11-15","plz": "322200","time": "2012-10-11"}' http://127.0.0.1:5000/geocoder/`
+    - or refer to json file where query data are store: `-d @[FILENAME]`: `curl -X GET -H 'Content-Type: application/json' -d @./2.code/query_example.json http://127.0.0.1:5000/geocoder/`
 
 
 ## Roadmap
