@@ -1,5 +1,6 @@
 import psycopg2 
-from flask import Flask, request, jsonify
+from flask import Flask, request
+from werkzeug.exceptions import BadRequest
 import json 
 import re # regular expression to handle non-standard addresss input
 import datetime #  process datatime 
@@ -9,7 +10,25 @@ import logging # for error message reporting
 logger = logging.getLogger()
 
 
+
 app = Flask(__name__)
+
+# custom function to read .json input 
+def custom_get_json():
+    try:
+        return request.get_json()
+    
+    except BadRequest:
+        json_raw = request.get_data(as_text=True)
+        
+        # Remove integer with leading zeros: e.g. 'plz': 07115
+        query_dict = re.sub(r'\b0+(\d+)', r'\1', json_raw)
+        
+        # Convert the query dictionary to a JSON string
+        json_data = json.loads(query_dict)
+        
+        return json_data
+
 
 connection = psycopg2.connect(user="zhoubin",
                                   host="127.0.0.1",
@@ -25,10 +44,10 @@ ADDRESS_MATCH = """SELECT str,hnr,postonm,latitude,longitude FROM hauskds WHERE
 
 
 
-
 @app.get("/geocoder/")
 def get_coords():
-    data = request.get_json()
+    data = custom_get_json()
+
     street = data.get("str")  # if not found, return None.  str should be reserved as data type keywore. 
     
     hnr = data.get("hnr",0) # if HausNr. not defined, return 0, centroid of the street returned.
