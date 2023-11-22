@@ -1,7 +1,9 @@
 {
-	"str" : "Grafngerstr.",
+	"str" :"Straße 12 - 14c",
 	"ort": "Moosach",
 	"hnr": 12,
- 	"plz": 56111,
+    "adz": "a",
+ 	"plz": 36423,
 	"time": "2012-10-11"
 }
+

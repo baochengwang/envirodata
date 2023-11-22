@@ -40,10 +40,30 @@ CREATE TABLE hauskds (
     nordwert decimal
     );
 
+
+
+
+-- craete gin (Generalized Inverted Index) index for columns where fuzzystrmatching is applied
+CREATE INDEX ix_dm ON hauskds USING gin (daitch_mokotoff(str)) WITH (fastupdate = off);
+CREATE INDEX ix_dm_city ON hauskds USING gin (daitch_mokotoff(postonm)) WITH (fastupdate = off);
+
+
 -- working directory = project root path
 -- \COPY hauskds FROM '0.raw/moosach_lite.csv' WITH CSV HEADER;
 
 \COPY hauskds FROM '0.raw/Hauskoordinaten_bayernweit_Lite.csv' WITH CSV HEADER;
+
+
+
+-- create a table to store unique cityname-plz pairs for pretesting the correctness of INPUT
+DROP TABLE IF EXISTS ort_plz;
+
+select distinct postonm,postplz
+  into TABLE ort_plz
+  from hauskds
+  order by postonm;
+  
+
 
 
 -- use the mean ostwert and nordwert to store the coordinates of the street, in case the house number is not given.
@@ -106,6 +126,7 @@ ADD COLUMN geom GEOMETRY(Point, :CRS),
 ADD COLUMN geom_wgs84 GEOMETRY(Point, :CRS_WGS84),
 ADD COLUMN latitude double precision,
 ADD COLUMN longitude double precision;
+
 
 
 -- convert coordinates (ostwert,nordwert) into point
