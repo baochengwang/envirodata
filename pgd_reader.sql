@@ -79,7 +79,7 @@ GROUP BY str, postplz, postonm, kreis, regbez, land
 -- set default value of hnr/adz to 0 in street coordinates table
 ALTER TABLE strkds
 ADD COLUMN hnr integer default 0,
-ADD COLUMN adz text default NULL;
+ADD COLUMN adz text default '';
 
 -- insert strkds to hauskds
 -- the order of columns must align with that in hauskds!!!
@@ -87,6 +87,8 @@ INSERT INTO hauskds
 SELECT str, hnr, adz, postplz, postonm, kreis, regbez, land, ostwert,nordwert 
 FROM strkds;
 
+-- delete strkds 
+DROP TABLE IF EXISTS strkds;
 
 -- -- merge hauskds and strkds
 -- CREATE TABLE hauskds_full AS (

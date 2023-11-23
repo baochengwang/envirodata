@@ -45,15 +45,19 @@ connection = psycopg2.connect(user="zhoubin",
 #   	daitch_mokotoff(%s) && daitch_mokotoff(postonm));"""
 
 ## VERSION 2.0
-ADDRESS_MATCH = """SELECT str,hnr,postonm,latitude,longitude FROM hauskds WHERE 
-	daitch_mokotoff(%s) && daitch_mokotoff(str) AND
-	hnr = (%s) AND 
- 	(postplz = (%s) OR
-  	 %s ~* postonm);"""
+# ADDRESS_MATCH = """SELECT str,hnr,postonm,latitude,longitude FROM hauskds WHERE 
+# 	daitch_mokotoff(%s) && daitch_mokotoff(str) AND
+# 	hnr = (%s) AND 
+#  	(postplz = (%s) OR
+#   	 (%s) ~* postonm);"""
+
+
+ADDRESS_MATCH = """select * from 
+address_match(%s,%s,%s,%s,%s);"""  # street, house_number, add_address, city, plz, lat, lon, logger
 
 # regular expression to check if a string ended with number(s), or LIKE ~ 12 - 15, 12c 
 # Street names with numbers, e.g., "Straße der 17. Juni" do not fall into this case.
-re_str_hnr = re.compile(r'([0-9]{0,5}\W{0,3}[0-9]+[a-zA-Z]{0,1})$')
+re_str_hnr = re.compile(r'([0-9]{0,5}\W{0,3}[0-9]+)([a-zA-Z]{0,1})$')
 
 # Function to convert house number (hnr) to integer
 #  e.g. "101" -- 101, "12c" -- 12, "12-14c" -> 13.
@@ -68,16 +72,23 @@ def hnr_string_to_int(hnr_string):
 def get_coords():
     data = custom_get_json()
 
-    street = data.get("str")  # if not found, return None. 
+    street = data.get('str','')  # if not found nor undefined, return ''. 
+
+    # regular expression to replace abbre.
+    street = re.sub("[sS]tr[.]{0,1}", "straße", street) # replace 'str.' to 'straße'
     
-    # if street name ENDED with numbers, it is highly probable that house number is included,
+    # IF street name is correctly given, assign hnr_derived to 0.
+    # hnr_derived will be used to assign hnr, if hnr is not given in JSON file.
+    hnr_derived = 0; 
+    adz_derived = '';
+    
+    # if street name ENDED with numbers, it is highly probable that house number is included.
+    # update the default hnr_derived 
     if re_str_hnr.search(street): # if True (street name ended with numbers)
-        hnr_string = re_str_hnr.search(street).group(0) # return the matched string 
-        hnr_derived = hnr_string_to_int(hnr_string)
-    else: 
-        # IF street name is correctly given, assign hnr_derived to 0.
-        # hnr_derived will be used to assign hnr, if hnr is not given in JSON file.
-        hnr_derived = 0; 
+        hnr_string = re_str_hnr.search(street) # return the matched string(s) 
+        hnr_derived = hnr_string_to_int(hnr_string.group(1))
+        if hnr_string.group(2) != '':
+            adz_derived = hnr_string.group(2) # separate adz from string.
         
     # read house number (hnr); IF not defined, return 0, centroid of the street returned
     hnr = data.get("hnr",hnr_derived)
@@ -85,10 +96,17 @@ def get_coords():
     # if hnr is read as an string, remove adz, and convert to integer!
     if isinstance(hnr,str): # if hnr is a string. # str is data type. DO NOT USE IT AS VARIABLE NAME !
         hnr = hnr_string_to_int(hnr)
-        
-    plz = data.get("plz") 
-    adz = data.get("adz")
+    
+    # get ZIP code, if not available, return None   
+    plz = data.get("plz",0)
+
+    # get adressezusatz (adz)
+    adz = data.get("adz", adz_derived) # if unavailable, using previously derived value - ''
+
+    # get city name (ort)
     ort = data.get("ort")
+
+    # get time stampe. 
     stime = data.get("time")
     
     ## Handle time input::
@@ -103,28 +121,17 @@ def get_coords():
     else:
         print("No Datetime Entry!")
         t_info = "Missing time input"
-
-    ## Handle Address input::
-    
-    ##  scenario 1: PLZ is given higher priority than cityname
-    ##  scenario 2: PLZ is missing 
-    ##  scenario 3: PLZ is incorrect, PLZ and cityname do not match [data table 'ort_plz' stores the unique pairs postonm-postplz]
-
-    
+        
     with connection:
         with connection.cursor() as cursor:
-            if plz is not None:
+            cursor.execute(ADDRESS_MATCH,(street,hnr,adz,ort,plz,))
+            location = cursor.fetchone()
                 
-                cursor.execute(ADDRESS_MATCH,(street,hnr,plz,ort,))
-                location = cursor.fetchone()
-            else: 
-
-
                 
     if location is not None:  # return value should be json-like format, dict     
         return json.dumps((*location,t_info)), 201
     else:
-        return {'Error':f"{street} {hnr},{ort} - Not Found!"}, 404
+        return {'Error':f"{street} {hnr},{ort},{plz} - Not Found!"}, 404
 
 
 

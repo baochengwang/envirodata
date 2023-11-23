@@ -1,9 +1,8 @@
 {
-	"str" :"Straße 12 - 14c",
-	"ort": "Moosach",
-	"hnr": 12,
-    "adz": "a",
- 	"plz": 36423,
+	"str" : "Wörthstr.",
+	"hnr": 10,
+	"adz": "",
+ 	"plz": 86159,
+	"ort": "Augsburg",
 	"time": "2012-10-11"
 }
-
