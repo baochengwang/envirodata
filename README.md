@@ -19,6 +19,12 @@ This is the script repository to build up a geocoding service based on PostgreSQ
     - `hks` is the postgresql database where hauskoordinaten data are stored.
     - `pgd_reader.sql` file reads Hauskoordinaten csv data and convert it to psql data table. 
 
+### [`pgcli`](https://github.com/dbcli/pgcli): auto-completion and syntax highlighting in `psql`
+
+- install `pgcli` for auto-completion in `psql` terminal: `pip install -U pgcli` or `brew install pgcli` (on MacOS).
+- USAGE: `$ pgcli database_name`
+
+
 ### How to start `flask` locally
 
 - `flask` is installed under the `mamba` environment `autogis` in `zsh`. 
@@ -46,6 +52,7 @@ This is the script repository to build up a geocoding service based on PostgreSQ
    - `hnr`: house number
    -  `adz`: Adressezusatz, additional address information
    -  `postplz`: Postleitzahl, postal code
+   - `postonm`: Ort name (place name)
    -  `kreis`: Landkreis
    -  `regez`: Bezirkverwaltung
    -  `land`: Bundesland
@@ -56,4 +63,18 @@ This is the script repository to build up a geocoding service based on PostgreSQ
 
 3. Build Python REST API and define fuzzy searching rules.
 
-4. ...
+4. Refine the fuzzy string matching rules.
+    - Preprocess address entered by users 
+        - set a thesaurus (str(.) -> straße)
+        - seperate str+hnr+(adz.) into individual entries
+    - Check whether postplz and postonm match
+        - TRUE: -> END
+        - FALSE -> Use postplz for query
+            - FOUND -> END
+            - NOT FOUND -> postplz be misspelled, use postonm for query.
+                - FOUND -> END
+                - NOT FOUND -> ERROR: Re-check Input
+    - For `str` query, combine `daitch_mokotoff()` and `levenshtein()` rules to sharpen the matching rules.
+    
+
+

@@ -1,0 +1,175 @@
+---
+title: "Tutorial on Postgresql"
+date: "`r Sys.Date()`"
+author: "[Bin Zhou](mailto:bin.zhou@med.uni-augsburg.de)"
+output:
+  rmdformats::downcute:
+    self_contained: true
+    code_folding: hide 
+    toc_depth: 2
+    default_style: "light"
+    downcute_theme: "default"
+---
+
+
+```{r setup, include=FALSE}
+## Global options
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+## TIPS ON TABLE 
+
+### Create an empty table using the structure of an existing table
+
+- Method 01
+```
+CREATE TABLE tab02
+AS
+SELECT * FROM tab01
+WITH NO DATA; 
+```
+
+- Method 02
+
+```
+CREATE TABLE tab02
+AS
+SELECT * FROM tab01
+WHERE FALSE;
+```
+The syntax above will not copy any indices nor constraints, e.g. primary/foreign keys.  
+
+- Method 03:
+```
+CREATE TABLE tab02
+(LIKE tab01);
+```
+The parentheses `()` are necessary!
+
+
+### `CREATE TABLE INHERITS` syntax
+```
+CREATE TABLE tab02(
+ new_item tex NOT NULL
+)
+INHERITS (tab01);
+```
+The code above creates a table with a structure inherited from another table + a newly defined column. 
+
+
+### `HAVING` vs. `WHERE` clause
+`HAVING` statement can only be used in an aggregate function, e.g., `GROUP BY`. `WHERE` applies before data are grouped by, while `HAVING` applies to the result of `GROUP BY` operation.
+
+```
+SELECT postonm AS city, count(*) AS nr_plz
+FROM ort_plz
+GROUP BY postonm
+HAVING count(*)> 10; -- !using nr_plz won't work!
+```
+Using `WHERE` will return error. 
+
+
+###  Add contraints to a table
+`ALTER TABLE table_name ADD table_constraint;` can be used to add constraints to a table, e.g., 
+
+```
+ALTER TABLE ort_plz
+ ADD CONSTRAINT postplz_check CHECK (postplz >= 1000 AND postplz <=99999);
+```
+OR `ALTER TABLE table_name ALTER column_name SET ...`
+
+```
+-- PLZ must not be null.
+ALTER TABLE ort_plz
+ ALTER postplz SET NOT NULL;
+
+-- set a default value for PLZ 
+ALTER TABLE ort_plz
+ ALTER postplz SET DEFAULT 10000;
+```
+
+### Change the type of a column
+`ALTER TABLE table_name ALTER COLUMN column_name TYPE new_data_type;`
+IF the new data type is not compatible with the old one (from `numeric` to `text`, rather than from `numeric` to `numeric(10,2)` [from unconstrained numeric to numeric with precision of 10 and a scale of 2, i.e., 2 decimal place]), the keyword `USING` is required.
+
+`ALTER TABLE table_name ALTER COLUMN column_name TYPE new_data_type USING expression;`, e.g.:
+
+```
+-- convert postplz from integer to text
+ALTER TABLE ort_plz ALTER COLUMN postplz TYPE TEXT USING postplz::text;
+```
+
+### JSON data type in pgsql
+PostgreSQL supports two JSON data types: `JSON` and `JSONB` (B for binary).
+
+- To create a table containing a JSON column:
+```
+CREATE TABLE fruits (
+  id INTEGER NOT NULL PRIMARY KEY,
+  fruit_name VARCHAR(100),
+  attributes JSONB
+);
+```
+
+- Insert value to the table:
+```
+INSERT INTO fruits (id, fruit_name, attributes)
+VALUES (1, 'apple','{"color":"red", "size":"medium", "weight":"100g"}');
+```
+- The function `jsonb_build_object()` provides a simple method to input JSON-format data.
+```
+INSERT INTO fruits (id,fruit_name, attributes)
+VALUES (1, 'apple',jsonb_build_object('color','red','size','medium'));
+```
+
+- To query from JSON attributes, using `->>` operator (`->>` operator returns data type stored in the JSON object, while `->` returns the JSON object, wrapped in paretheses.):
+```
+select * from fruits where attributes ->>'color' = 'red';
+```
+
+```
+select attributes->'color' AS color from fruits;
+```
+
+- To check whether an attribute exists, using `?` operator:
+
+```
+SELECT * FROM fruits 
+WHERE
+attributes ? 'height' = true;
+```
+
+- To insert or update a JSON attribute, using `||` operator or `jsonb_set()` or `jsonb_insert()`:
+```
+UPDATE fruits
+SET attributes = attributes || '{"color":"yellow"}'
+WHERE id = 1;
+```
+OR 
+```
+UPDATE fruits
+SET attributes = jsonb_insert(fruits, '{size}', '"large"')
+WHERE id = 5;
+```
+
+```
+UPDATE fruits
+SET attributes = jsonb_set(fruits, '{size}', '"large"')
+WHERE id = 1;
+```
+
+
+## Shortcuts in PSQL
+
+|  psql    |     SQL       |   Note  |  
+|----------|:-------------:|---------|
+|   `\dn`   |   ` SELECT * FROM pg_namespace;`| list *Schemas* in the database |
+| `\dt` | `SELECT * FROM pg_tables;`  |  list *Tables* in the database |
+|.. |...| ...|
+
+
+
+
+
+
+
