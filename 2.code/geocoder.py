@@ -86,12 +86,16 @@ def get_coords():
     # update the default hnr_derived 
     if re_str_hnr.search(street): # if True (street name ended with numbers)
         hnr_string = re_str_hnr.search(street) # return the matched string(s) 
-        hnr_derived = hnr_string_to_int(hnr_string.group(1))
+        street = street.replace(hnr_string.group(0),'') # update the read street name
+        hnr_derived = hnr_string_to_int(hnr_string.group(1)) # overwrite the default hnr_derived
         if hnr_string.group(2) != '':
             adz_derived = hnr_string.group(2) # separate adz from string.
         
     # read house number (hnr); IF not defined, return 0, centroid of the street returned
     hnr = data.get("hnr",hnr_derived)
+
+    if hnr is None or not hnr:
+        hnr = hnr_derived
     
     # if hnr is read as an string, remove adz, and convert to integer!
     if isinstance(hnr,str): # if hnr is a string. # str is data type. DO NOT USE IT AS VARIABLE NAME !
