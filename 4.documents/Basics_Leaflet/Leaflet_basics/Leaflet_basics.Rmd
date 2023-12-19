@@ -1,0 +1,226 @@
+---
+title: "Web-mapping with Leaflet"
+date: "`r Sys.Date()`"
+author: "[Bin Zhou](mailto:bin.zhou@med.uni-augsburg.de)"
+output:
+  rmdformats::downcute:
+    self_contained: true
+    code_folding: hide 
+    toc_depth: 2
+    default_style: "light"
+    downcute_theme: "default"
+---
+
+
+```{r setup, include=FALSE}
+## Global options
+knitr::opts_chunk$set(cache = TRUE)
+```
+
+## Useful Tools 
+
+- `Visual Studio Code` or `Sublime` (for html tag intellisense / autocompletion)
+- [`Leaflet`](https://leafletjs.com/) JS
+- [`geojson.io`](https://geojson.io/)
+
+## HTML & CSS 
+
+A web map using `leaflet` should include `leaflet.css` and `leaflet.js` (either locally or via URL) in the `<head>...</head>`.
+
+```
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Document</title>
+	<script src="leaflet/leaflet.js"></script>
+	<link rel="stylesheet" href="leaflet/leaflet.css">
+	<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+
+<body>
+
+
+<!-- put Javascript code here, within the tag of script -->
+
+
+</body>
+</html>
+```
+
+
+## Leaflet elements
+
+
+### Reserve a map division within the HTML `body`.
+
+```
+<div id = "map" style = "height:70%"> </div>
+```
+
+### Set map style
+
+The map style can be set in a separate __style.css__ file or put within the `<style> </style>` tag.
+
+
+``` 
+/* style.css */
+
+html, body, #map {
+    height: 90%;
+    width: 100%;
+}
+```
+
+The map style can be set __inline__ as well:
+
+```
+<div id ="map" style ="height:80%; width:70%"> </div>
+```
+
+### Create a map in the 'map' division
+
+Leaflet scripts should be inside the `<script> </script>` tag.
+
+```
+<script>
+
+// set map center and zoom 
+let  map = L.map('map').setView([48,10],8);
+
+// map tiles
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+// add a marker to the map
+let pnt = L.marker(L.latLng(47.5, 11)).addTo(map);
+
+// add popup text of the marker
+pnt.bindPopup("Hello world!");
+
+</script>
+
+```
+
+  - __Attention__: coordinates in leaflet are given as [latitude,longitude].
+  - `.setView([lat,lon],zoom)`
+  
+  
+### Available Map tiles for Leaflet
+
+A list of map tiles available for leaflet can be found [here](https://leaflet-extras.github.io/leaflet-providers/preview/).
+
+```
+// Add Open Street Map (OSM) tiles
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+	maxZoom: 19,
+	attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+
+// Add ESRI WorldStreetMap
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+	attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+}).addTo(map);
+
+```
+
+### Vector Layers
+
+- Point 
+```
+let pnt = L.marker([48,10],{color:"red"}).addTo(map);
+```
+
+- Polyline 
+
+```
+let ln = L.polyline([[40,10],[50,12]],{color:"black",opacity:0.4}).addTo(map);
+```
+
+
+- Polygon (No need to repeat the coordinates of the initial point in the end)
+  
+```
+let latlngs = [[37, -109.05],[41, -109.03],[41, -102.05],[37, -102.04]];`
+
+let plg = L.polygon(latlngs, {color: 'red'}).addTo(map);`
+
+// zoom to the layer.
+map.fitBounds(plg.getBounds()) 
+
+```
+  -  `.getBounds()` method returns the bounding box of the object.
+
+- Rectangle (Bounding Box)
+
+```
+var bounds = [[48.1194826161, 10.7328907681], [48.3726247244, 11.2114056874]];
+
+// create an orange rectangle
+let rect = L.rectangle(bounds, {color: "orange", weight: 1, fillColor:"red", fillOpacity:0.2}).addTo(map);
+
+// zoom to the rectangle
+map.fitBounds(bounds) 
+// or map.fitBounds(rect.getBounds())
+```
+
+
+- Circle 
+
+```
+L.circle([50.5, 30.5], {radius: 200}).addTo(map);
+```
+
+- Options for layers are given in `JSON` format, delimited by comma `,`.
+
+
+### Popups 
+
+- `marker.bindPopup("TEXT HERE");`
+
+
+- `L.popup().setLatLng([47.5,10.7]).setContent("Text");`
+
+### Events
+
+- Event listeners are added as fucntion inside the `on()` method. The event object `e` contains information about the click, e.g. latitude + longitude (`e.latlng`, `e.latlng.lat` or `e.latlng.lng.toFixed(4)`).
+
+```
+function onClick(e) { ... }
+
+// click = single click, dblclick= double click
+map.on('click', onClick);
+map.off('click', onClick);
+```
+
+### GeoJSON 
+
+```
+
+var geojsonFeature = {
+  "type": "FeatureCollection",
+  "name": "bbox",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Augsburg"
+      },
+      "geometry": {
+        "coordinates": [
+          10.9,
+          48.37
+        ],
+        "type": "Point"
+      },
+      }
+  ]
+}
+
+L.geoJSON(geojsonFeature).addTo(map);
+
+```
+

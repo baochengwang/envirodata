@@ -159,6 +159,41 @@ WHERE id = 1;
 ```
 
 
+### Create Index on table
+
+```
+CREATE INDEX index_name ON table_name USING [INDEX_TYPE] (column_name);
+```
+
+PostgreSQL provides several types of index: 
+  
+  - B-tree (`btree`)
+    - Columns where comparison operators (`<`,`>=`, `BETWEEN`, `IS NULL`) are normally applied.
+    - regluar expression `LIKE` and `~`
+  - Hash (`hash`)
+    - simple `=` query
+  - GiST (`gist`)
+    - Geometric operators, e.g. 
+      - geometric_type `<<` geometric_type → boolean ::: Is first object strictly left of second? Available for point, box, polygon, circle.
+      - geometric_type `@>` geometric_type → boolean ::: Does first object contain second?
+      - geometric_type `&&` geometric_type → boolean ::: Do these objects overlap? 
+      - [more operators](https://www.postgresql.org/docs/current/functions-geometry.html)
+  - SP-GiST
+    - similar to GiST
+  - GIN (generalized inverted indexes)
+    - suitable for data values with multiple component values, arrays.
+    - operators `<@ @> = &&`
+  - BRIN (Block Range INdexes)
+    - column of linear sort order (creation datetime)
+    
+
+
+
+
+
+
+
+
 ## Shortcuts in PSQL
 
 |  psql    |     SQL       |   Note  |  
