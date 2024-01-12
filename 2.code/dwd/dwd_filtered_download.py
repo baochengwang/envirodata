@@ -6,7 +6,22 @@ from datetime import datetime
 from pathlib import Path
 from multiprocessing import cpu_count 
 from multiprocessing.pool import ThreadPool
+import re
+import logging
 
+# ----------------------------------------------
+#   Constant 
+# ----------------------------------------------
+
+# ABBS = {'wind':'ff',
+#         'air_temperature':'tu',
+#         'dew_point':'td',
+#         'moisture': 'tf', 
+#         'solar':'sd',
+#         'sun':'sd',
+#         'precipitation':'rr',
+#         'extreme_wind':'fx',
+#         'extreme_temperature':'tx'}
 
 # ----------------------------------------------
 #   Input Data
@@ -15,6 +30,8 @@ from multiprocessing.pool import ThreadPool
 # variable name
 # vars = ['air_temperature','wind','solar','extreme_temperature','precipitation','extreme_wind'] 
 var = 'air_temperature' 
+
+t_interval = '10_minutes'  # ['10_minutes','hourly']
 
 state= ['Bayern']  # state is a list, wrapped in [] 
 
@@ -40,25 +57,50 @@ if not Path(target_folder).is_dir():
 #    START FUNCTIONS
 # ----------------------------------------------
 
-def dwd_meta_reader(var):
-    # abbrevations for variables
-    abbs = {'wind':'ff',
-           'air_temperature':'tu',
-          'solar':'sd',
-          'precipitation':'rr',
-          'extreme_wind':'fx',
-          'extreme_temperature':'tx'}
 
-    abb = abbs[var]
+# function to list all data in the url, with an extension of `ext`
+def listFD(url, ext=''):
+    page = requests.get(url).text
+    soup = BeautifulSoup(page, 'html.parser')
+    links = [node.get('href') for node in soup.find_all('a') if node.get('href').endswith(ext)]
+    return(links)
+
+
+
+def dwd_meta_reader(var,t_res='10_minutes'):
+
+    # parent URL folder where all variables at temporal resolution `t_res` are available
+    p_list = ('https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/'+ 
+                t_res+'/')
     
-    # url of metadata
-    url_meta = ('https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/'+ 
-        var + '/historical/zehn_min_' + 
-        abb +'_Beschreibung_Stationen.txt')
+    # available variables downloadable
+    avs = listFD(p_list)
+
+    avs = [av.rstrip('/') for av in avs]
+
+    # if variable is not available for the defined temporal resolution, return a message!
+    if not var in avs:
+        logging.error(f'{t_res} {var} is NOT AVAILABLE for download!')
+        return
     
-    # header 
+    # url where metadata is stored
+    base_url = p_list + var + '/historical/'
+    
+    url_meta = listFD(base_url,'txt')
+
+    # the metadata file is most often ended with '*_Beschreibung_Stationen.txt'; 
+    # It has not been systematically checked whether this holds TURE.
+    pattern = re.compile(r'Beschreibung_Stationen.txt')
+    
+    url_meta = [url for url in url_meta if pattern.search(url)]
+
+    # the complete URL for meta data.
+    url_meta = ''.join([base_url]+url_meta)
+
+    # read header 
     header = pd.read_csv(url_meta, nrows=1, delimiter=" ",encoding='latin1')
-    # raw data 
+    
+    # read raw data 
     data = pd.read_fwf(url_meta, widths=[6, 9, 8, 15, 12, 10, 42, 98], header=None, skiprows=2, encoding='latin1')
 
     # rename columns
@@ -74,13 +116,6 @@ def dwd_meta_reader(var):
 
     return(station_meta)
 
-
-# function to list all data in the url, with an extension of `ext`
-def listFD(url, ext=''):
-    page = requests.get(url).text
-    soup = BeautifulSoup(page, 'html.parser')
-    links = [node.get('href') for node in soup.find_all('a') if node.get('href').endswith(ext)]
-    return(links)
 
 
 # function to download a single file  
@@ -102,15 +137,30 @@ def download_parallel(args):
 
 
 # function to list downloadable zip files for variable `var`
-def dwd_file_list(var,ids,y_start=2010,y_end=2022,target_folder='./'):
+def dwd_file_list(var,ids,t_res='10_minutes',y_start=2010,y_end=2022,target_folder='./'):
+
+    # parent URL folder where all variables at temporal resolution `t_res` are available
+    p_list = ('https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/'+ 
+                t_res+'/')
     
-    url = 'https://opendata.dwd.de/climate_environment/CDC/observations_germany/climate/10_minutes/' + var + '/historical/'
+    # available variables downloadable
+    avs = listFD(p_list)
+
+    avs = [av.rstrip('/') for av in avs]
+
+    # if variable is not available for the defined temporal resolution, return a message!
+    if not var in avs:
+        logging.error(f'{t_res} {var} is NOT AVAILABLE for download!')
+        return
     
-    # file extension
+    # url where metadata is stored
+    base_url = p_list + var + '/historical/'
+
+    # file extension for DWD Climate Data
     ext = 'zip'
 
-    # all .zip files 
-    fns = listFD(url,ext)
+    # list all zip files within the base_url
+    fns = listFD(base_url, ext)
 
     # Creating a dataframe
     df = pd.DataFrame({'url':fns})
@@ -145,7 +195,8 @@ fm = dwd_meta_reader(var)
 station_ids = fm.query(f"Bundesland in {state}")['Stations_id'].to_list()
 
 # all available zip files and their metadata
-zip_files = dwd_file_list(var,station_ids,year_start,year_end,target_folder='../../0.raw/dwd/')
+# Default temporal resolution 10-min
+zip_files = dwd_file_list(var,station_ids,y_start = year_start,y_end = year_end,target_folder='../../0.raw/dwd/')
 
 urls = zip(zip_files.full_url,zip_files.local)
 
