@@ -4,3 +4,6 @@
 .DS_Store
 .ipynb_*
 .Rhistory
+__pycache__
+Untitled*.ipynb
+sandbox
