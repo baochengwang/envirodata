@@ -1,3 +1,6 @@
+# Script for Downloading ERA5-Land data 
+
+
 import cdsapi
 import sys
 import yaml
@@ -6,7 +9,7 @@ import os
 from pathlib import Path
 import calendar
 
-# home directory where .cdsapi_[climate,atmosphere] file is stored
+## home directory where .cdsapi_[climate,atmosphere] file is stored
 home_path = Path.home()
 
 cdsapi_path=os.path.join(home_path,'.cdsapi_climate')
@@ -15,19 +18,17 @@ with open(cdsapi_path, 'r') as f:
             credentials = yaml.safe_load(f)
             c = cdsapi.Client(url=credentials['url'], key=credentials['key'])
 
-# Folder to store download data
-output_path = '../../0.raw/era5_land/'
 
-# if the folder does not exist, then create it.
+## if the folder does not exist, then create it.
 if not Path(output_path).is_dir():
     Path(output_path).mkdir(parents=True, exist_ok=True)
 
 
 ## get year and variable from I/O
-[variable, year]=sys.argv[1:]
+[variable, year, output_dir]=sys.argv[1:]
 
 
-def era_download(variable,year):
+def era_download(variable,year,output_dir='./'):
     ## short names for variables   
     vdict={'u10':'10m_u_component_of_wind',
            'v10':'10m_v_component_of_wind',
@@ -36,7 +37,7 @@ def era_download(variable,year):
     
     varn=vdict[variable]
 
-    filename = output_path+variable+'_'+year+".zip"
+    filename = output_dir+variable+'_'+year+".zip"
 
     # months= 1-12, days=1-31, time= 00:00-23:00 
     # CDS download available data for all days in each month
@@ -69,4 +70,4 @@ def era_download(variable,year):
 ## downloading variable for year....
 print('dowloading', variable,'for year: ',year,'\n')
 
-era_download(variable,year)
+era_download(variable,year,output_dir)
