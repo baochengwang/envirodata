@@ -182,7 +182,7 @@ def dwd_file_list(var,ids,t_res='10_minutes',y_start=2010,y_end=2022,target_fold
     df = df[df.von_datum <= datetime(y_end,1,1)]
 
     # full_urls are URLs for downloading
-    df = df.assign(full_url=url+df.url,
+    df = df.assign(full_url=base_url+df.url,
                   local = target_folder+df.url)
        
     return(df)
@@ -205,4 +205,4 @@ urls = zip(zip_files.full_url,zip_files.local)
 
 # ---------------------------------------
 
-download_parallel(urls)
+# download_parallel(urls)
