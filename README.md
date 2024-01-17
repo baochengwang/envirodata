@@ -1,16 +1,21 @@
-# EnviroData Geocoder 
+# EnviroData Project
 
 This is the script repository to build up a geocoding service based on PostgreSQL in the framework of the Intramural Project -- "EnviroData". 
 
 ## Prerequisites
 
-- python 3.11.5
+- python 3.12.0
 	- flask 3.0.0 [REST API]
 	- psycopg2 2.9.7 [PostgreSQL database adapter for Python]
 - mamba 1.4.2
 - conda 23.3.1
 - psql 16.0 
 - postgis 3.4.0 
+- poetry 1.7.1 [Installation](https://python-poetry.org/docs/#installing-with-the-official-installer)
+
+
+
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 
 ### Useful `psql` commands

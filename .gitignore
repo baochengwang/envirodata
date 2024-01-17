@@ -1,9 +1,8 @@
 0.raw
-1.work
-3.outcome
 .DS_Store
 .ipynb_*
 .Rhistory
 __pycache__
 Untitled*.ipynb
 sandbox
+.env
