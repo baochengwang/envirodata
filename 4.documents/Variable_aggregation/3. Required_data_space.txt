@@ -1,0 +1,26 @@
+Required space for raw data (rough estimations)
+
+NetCDF files from ERA5_Land and CAMS
+
+	1. Ca. 5 MB space needed for a single variable for a single month.
+
+	2. For a year, 12 * 5 MB = 60 MB
+
+	3. For 10 years, 10* 60 MB = 	600 MB
+
+	4. Lets say we download 20 variables (max.), 20 * 600 MB = 12000 MB = 11. 72 GB
+
+Txt files from DWD
+
+	1. We might select 100 - 120 stations (max.) from Bavaria.
+
+	2. Data for single variable for each station ranges between 1.8 to 2.5 MB (lets consider 3 MB) 
+
+	3. For four variables, 3 MB * 120 stations * 4 variables = 1400 MB = 1. 4 GB
+
+
+So, in total we might require ca. 15 to 20 GB space. 
+	
+
+
+
