@@ -1,6 +1,5 @@
 # Script for Downloading ERA5-Land data
 
-
 import cdsapi
 import sys
 import yaml
@@ -16,6 +15,7 @@ load_dotenv()
 
 
 # load CDSAPI URL and KEY
+# era5_url and era5_key are defined in .env file under the home directory of the project
 ERA5_URL = os.environ.get('era5_url')
 ERA5_KEY = os.environ.get('era5_key')
 

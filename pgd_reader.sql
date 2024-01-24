@@ -49,9 +49,9 @@ CREATE INDEX ix_dm_city ON hauskds USING gin (daitch_mokotoff(postonm)) WITH (fa
 
 
 -- working directory = project root path
--- \COPY hauskds FROM '0.raw/moosach_lite.csv' WITH CSV HEADER;
+-- \COPY hauskds FROM 'raw/moosach_lite.csv' WITH CSV HEADER;
 
-\COPY hauskds FROM '0.raw/Hauskoordinaten_bayernweit_Lite.csv' WITH CSV HEADER;
+\COPY hauskds FROM 'raw/Hauskoordinaten_bayernweit_Lite.csv' WITH CSV HEADER;
 
 
 

@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "envirodata"
+version = "0.1.0"
+description = "Intramural Project associating environmental factors with adverse health outcome data."
+authors = [
+    {name = "Bin Zhou", email = "bin.zhou@med.uni-augsburg.de"}, 
+    {name = "Surendra Ranpal", email ="surendra.ranpal@med.uni-augsburg.de"}, 
+    {name="Christoph Knote", email = "christoph.knote@med.uni-augsburg.de"}
+    ]
+homepage=""
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.12"
+psycopg2 = "^2.9.9"
+Flask = "^3.0.0"
+pandas = "^2.1.4"
+DateTime = "^5.4"
+cdsapi = "^0.6.1"
+
+
+[project.urls]
+Homepage = "https://tba.com"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
