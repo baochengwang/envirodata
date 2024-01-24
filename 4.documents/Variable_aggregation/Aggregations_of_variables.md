@@ -56,13 +56,13 @@ The following aggregations are decided till date.
 - Seven days average of maximum PM2.5
 - 30 days average of maximum PM2.5
 
-## NO2 (CAMS or WRF Chem or LfU)
+## NO<sub>2 (CAMS or WRF Chem or LfU)
 - Daily average NO<sub>2 
 - Three days average NO<sub>2
 - Seven days average NO<sub>2
 - 30 days average NO<sub>2
 
-## Maximum NO2 (CAMS or WRF Chem /LfU)
+## Maximum NO<sub>2 (CAMS or WRF Chem /LfU)
 - Daily maximum NO<sub>2
 - Three days average of maximum NO<sub>2
 - Seven days average of maximum NO<sub>2
