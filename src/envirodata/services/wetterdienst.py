@@ -1,5 +1,6 @@
 import logging
 import datetime
+import os
 
 import polars as pl
 import numpy as np
@@ -17,6 +18,7 @@ from sqlalchemy import (
     select,
 )
 
+from wetterdienst import Settings
 from wetterdienst.provider.dwd.observation import DwdObservationRequest
 
 logger = logging.getLogger(__name__)
@@ -137,12 +139,15 @@ class CacheDB:
         return data
 
 
-def cache_parameter(date, parameter, resolution, area, cache_db):
+def cache_parameter(date, parameter, resolution, area, wd_cache_dir, cache_db):
+    settings = Settings(cache_dir=wd_cache_dir)
+
     request = DwdObservationRequest(
         parameter=parameter,
         resolution=resolution,
         start_date=date,
         end_date=date + datetime.timedelta(hours=23, minutes=59, seconds=59),
+        settings=settings,
     )
 
     stations = request.filter_by_bbox(*area)
@@ -166,10 +171,12 @@ def cache_parameter(date, parameter, resolution, area, cache_db):
             cache_db.insert(station_id, lon, lat, parameters, dates, values)
 
 
-def cache(date, area, db_connection, obs_requests):
+def cache(date, area, wd_cache_dir, db_connection, obs_requests):
     cache_db = CacheDB(db_connection)
     for obs_request in obs_requests:
-        cache_parameter(date, area=area, cache_db=cache_db, **obs_request)
+        cache_parameter(
+            date, area=area, wd_cache_dir=wd_cache_dir, cache_db=cache_db, **obs_request
+        )
 
 
 def get(date, variable, longitude, latitude, db_connection, variable_translation_table):

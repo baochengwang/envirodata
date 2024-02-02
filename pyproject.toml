@@ -7,8 +7,8 @@ license = "GPL-3.0-or-later"
 readme = "README.md"
 
 [tool.poetry.scripts]
-run_server = "envirodata.scripts.server:main"
-load_data = "envirodata.scripts.data_loader:main"
+run_server = "envirodata.scripts.run_server:main"
+load_data = "envirodata.scripts.load_data:main"
 
 
 [tool.poetry.dependencies]

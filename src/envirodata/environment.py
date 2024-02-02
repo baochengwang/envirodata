@@ -1,9 +1,6 @@
 import logging  # for error message reporting
 import datetime
 
-import psycopg2
-from psycopg2.extras import LoggingConnection
-
 from envirodata.utils.general import load_object
 
 # error message
@@ -41,13 +38,7 @@ class Service:
 
 class Environment:
     def __init__(self, config):
-        self.conn = psycopg2.connect(
-            connection_factory=LoggingConnection, **config["database"]
-        )
-        self.conn.initialize(logger)
-
         self.services = {}
-
         self.register_services(config["services"])
 
     def register_services(self, config):

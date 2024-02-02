@@ -1,3 +1,7 @@
+period:
+  start_date: "2023-01-01T00:00:00"
+  end_date: "2023-01-07T00:00:00"
+
 geocoder:
   database:
     user: "envirodata"
@@ -7,12 +11,6 @@ geocoder:
     database: "geocoding"
 
 environment:
-  database:
-    user: "envirodata"
-    password: "envirodata"
-    host: "127.0.0.1"
-    port: "5432"
-    database: "envirodata"
   domain:
     lonmin: &lonmin 5.8
     lonmax: &lonmax 15.29
@@ -26,18 +24,21 @@ environment:
           method: "cache"
           config:
             area: [ *lonmin, *latmin, *lonmax, *latmax ]
+            wd_cache_dir: "cache/wetterdienst/"
             db_connection: &DWD_CACHE_DB_PATH "sqlite+pysqlite:///cache/dwd.sqlite3"
             obs_requests:
+              - parameter: "wind_gust_max"
+                resolution: "daily"
               - parameter: "precipitation_height"
-                resolution: "hourly"
+                resolution: "daily"
               - parameter: "temperature_air_mean_200"
-                resolution: "hourly"
-              - parameter: "temperature_dew_point_mean_200"
-                resolution: "hourly"
-              - parameter: "pressure_air_sea_level"
-                resolution: "hourly"
-              - parameter: "wind_speed"
-                resolution: "hourly"
+                resolution: "daily"
+              - parameter: "temperature_air_max_200"
+                resolution: "daily"
+              - parameter: "temperature_air_min_200"
+                resolution: "daily"
+              - parameter: "humidity"
+                resolution: "daily"
         output:
           module: "envirodata.services.wetterdienst"
           method: "get"
@@ -116,10 +117,6 @@ environment:
             output_fpath_pattern: &ERA5_LAND_CACHE_PATH_PATTERN "cache/era5_land/%Y%m%d.nc"
             cdsurl: "https://cds.climate.copernicus.eu/api/v2"
             cdskey: "284751:ab892a4c-2eaa-4f3e-84c7-e973c840169a"
-        load_in_db:
-          module: None
-          method: None
-          config: {}
         output:
           module: "envirodata.services.cdsapi"
           method: "get"
