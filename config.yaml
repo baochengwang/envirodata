@@ -1,0 +1,138 @@
+geocoder:
+  database:
+    user: "envirodata"
+    password: "envirodata"
+    host: "127.0.0.1"
+    port: "5432"
+    database: "geocoding"
+
+environment:
+  database:
+    user: "envirodata"
+    password: "envirodata"
+    host: "127.0.0.1"
+    port: "5432"
+    database: "envirodata"
+  domain:
+    lonmin: &lonmin 5.8
+    lonmax: &lonmax 15.29
+    latmin: &latmin 47.07
+    latmax: &latmax 55.18
+  services:
+      - label: "DWD"
+        variables: [ "T_2m", "Td_2m", "WSPD_10m", "PMSL", "PREC" ]
+        input:
+          module: "envirodata.services.wetterdienst"
+          method: "cache"
+          config:
+            area: [ *lonmin, *latmin, *lonmax, *latmax ]
+            db_connection: &DWD_CACHE_DB_PATH "sqlite+pysqlite:///cache/dwd.sqlite3"
+            obs_requests:
+              - parameter: "precipitation_height"
+                resolution: "hourly"
+              - parameter: "temperature_air_mean_200"
+                resolution: "hourly"
+              - parameter: "temperature_dew_point_mean_200"
+                resolution: "hourly"
+              - parameter: "pressure_air_sea_level"
+                resolution: "hourly"
+              - parameter: "wind_speed"
+                resolution: "hourly"
+        output:
+          module: "envirodata.services.wetterdienst"
+          method: "get"
+          config:
+            db_connection: *DWD_CACHE_DB_PATH
+            variable_translation_table:
+              "PREC": "precipitation_height"
+              "T_2m": "temperature_air_mean_200"
+              "Td_2m": "temperature_dew_point_mean_200"
+              "PMSL": pressure_air_sea_level"
+              "WSPD_10m": "wind_speed"
+      - label: "CAMS"
+        variables: [ "PM2.5", "O3", "NO2"]
+        input:
+          module: "envirodata.services.cdsapi"
+          method: "download"
+          config:
+            dataset: "cams-europe-air-quality-forecasts"
+            request:
+              model: "ensemble"
+              date: "%Y-%m-%d/%Y-%m-%d"
+              format: "netcdf"
+              variable: [
+                  "nitrogen_dioxide",
+                  "ozone",
+                  "particulate_matter_2.5um"
+              ]
+              level: "0"
+              type: "analysis"
+              time: [
+                  '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
+                  '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+                  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+                  '18:00', '19:00', '20:00', '21:00', '22:00', '23:00',
+              ]
+              leadtime_hour: "0"
+              area: [ *latmax, *lonmin, *latmin, *lonmax ]
+            output_fpath_pattern: &CAMS_CACHE_PATH_PATTERN "cache/cams/%Y%m%d.nc"
+            # cdsurl: ...
+            # cdskey: ...
+        output:
+          module: "envirodata.services.cdsapi"
+          method: "get"
+          config:
+            cache_fpath_pattern: *CAMS_CACHE_PATH_PATTERN
+            time_calculation: "time_since_analysis"
+            variable_translation_table:
+              "PM2.5": "pm2p5_conc"
+              "NO2": "no2_conc"
+              "O3": "o3_conc"
+      - label: "ERA5_land"
+        variables: [ "U_10m", "V_10m", "Td_2m", "T_2m" ]
+        input:
+          module: "envirodata.services.cdsapi"
+          method: "download"
+          config:
+            dataset: "reanalysis-era5-land"
+            request:
+              variable: [
+                  '10m_u_component_of_wind', 
+                  '10m_v_component_of_wind', 
+                  '2m_dewpoint_temperature',
+                  '2m_temperature',
+              ]
+              year: '%Y'
+              month: '%m'
+              day: '%d'
+              time: [
+                  '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
+                  '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+                  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+                  '18:00', '19:00', '20:00', '21:00', '22:00', '23:00',
+              ]
+              area: [ *latmax, *lonmin, *latmin, *lonmax ]
+              format: 'netcdf'
+            output_fpath_pattern: &ERA5_LAND_CACHE_PATH_PATTERN "cache/era5_land/%Y%m%d.nc"
+            cdsurl: "https://cds.climate.copernicus.eu/api/v2"
+            cdskey: "284751:ab892a4c-2eaa-4f3e-84c7-e973c840169a"
+        load_in_db:
+          module: None
+          method: None
+          config: {}
+        output:
+          module: "envirodata.services.cdsapi"
+          method: "get"
+          config:
+            cache_fpath_pattern: *ERA5_LAND_CACHE_PATH_PATTERN
+            time_calculation: "hours_since_epoch"
+            variable_translation_table:
+              "U_10m": "u10"
+              "V_10m": "v10"
+              "Td_2m": "d2m"
+              "T_2m":  "t2m"
+
+
+
+
+

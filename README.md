@@ -1,3 +1,11 @@
+## Setup POSTGIS database
+
+### Geocoding
+
+Use docker
+  1) tools/geocoding_server/create_postgres_server.bash
+
+
 # EnviroData Project
 
 This is the script repository to build up a geocoding service based on PostgreSQL in the framework of the Intramural Project -- "EnviroData". 

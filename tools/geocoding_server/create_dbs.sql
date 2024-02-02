@@ -1,0 +1,2 @@
+CREATE DATABASE geocoding;
+CREATE DATABASE envirodata;
