@@ -12,26 +12,23 @@ class Service:
         self.variables = config["variables"]
         self.config = config
 
-    def load(self, start_date, end_date):
         input_config = self.config["input"]
-        input_method = load_object(input_config["module"], input_config["method"])
+        input_class = load_object(input_config["module"], "Loader")
+        self._loader = input_class(**input_config["config"])
 
-        cur_date = start_date
-        while cur_date <= end_date:
-            input_method(cur_date, **input_config["config"])
-            cur_date += datetime.timedelta(days=1)
+        output_config = self.config["output"]
+        output_class = load_object(output_config["module"], "Getter")
+        self._getter = output_class(**output_config["config"])
+
+    def load(self, start_date, end_date):
+        self._loader.load(start_date, end_date)
 
     def get(self, date, longitude, latitude, variables=None):
         if not variables:
             variables = self.variables
 
-        output_config = self.config["output"]
-        output_method = load_object(output_config["module"], output_config["method"])
-
         return {
-            variable: output_method(
-                date, variable, longitude, latitude, **output_config["config"]
-            )
+            variable: self._getter.get(date, variable, longitude, latitude)
             for variable in variables
         }
 

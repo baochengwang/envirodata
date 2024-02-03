@@ -1,2 +1,2 @@
 CREATE DATABASE geocoding;
-CREATE DATABASE envirodata;
+CREATE DATABASE dwd;

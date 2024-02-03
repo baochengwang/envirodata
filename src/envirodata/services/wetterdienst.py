@@ -1,6 +1,4 @@
 import logging
-import datetime
-import os
 
 import polars as pl
 import numpy as np
@@ -25,9 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 class CacheDB:
-    def __init__(self, conn):
-        logger.debug("Setting up cache DB at %s", conn)
-        self.engine = create_engine(conn)  # , echo=True)
+    def __init__(self, db_uri):
+        logger.critical("Setting up cache DB at %s", db_uri)
+        self.engine = create_engine(db_uri)  # , echo=True)
         self.metadata = MetaData()
         self.metadata.reflect(bind=self.engine)
         if not "stations" in self.metadata.tables:
@@ -38,10 +36,18 @@ class CacheDB:
                 Column("longitude", Float),
                 Column("latitude", Float),
             )
+        if not "variables" in self.metadata.tables:
+            _ = Table(
+                "variables",
+                self.metadata,
+                Column("station_id", String),
+                Column("parameter", String),
+                UniqueConstraint("station_id", "parameter"),
+            )
         self.metadata.create_all(self.engine)
 
     def create_station_table(self, station_id, longitude, latitude):
-        logger.debug("Adding station table for %s", station_id)
+        logger.critical("Adding station table for %s", station_id)
         _ = Table(
             station_id,
             self.metadata,
@@ -60,10 +66,37 @@ class CacheDB:
 
         self.metadata.create_all(self.engine)
 
+    def _is_cached(self, station_id, parameter):
+        tbl = self.metadata.tables["variables"]
+
+        stmt = (
+            select(tbl)
+            .where(tbl.c.station_id == station_id)
+            .where(tbl.c.parameter == parameter)
+        )
+
+        with self.engine.connect() as conn:
+            mei = conn.execute(stmt)
+            result = mei.all()
+
+        return len(result) > 0
+
+    def remember_cached_variable(self, station_id, parameter):
+        with self.engine.connect() as conn:
+            _ = conn.execute(
+                insert(self.metadata.tables["variables"]),
+                {"station_id": station_id, "parameter": parameter},
+            )
+            conn.commit()
+
     def insert(self, station_id, longitude, latitude, parameters, dates, values):
-        logger.debug("Inserting data for %s %s", station_id, parameters[0])
+        logger.critical("Inserting data for %s %s", station_id, parameters[0])
         if not station_id in self.metadata.tables:
             self.create_station_table(station_id, longitude, latitude)
+
+        if self._is_cached(station_id, parameters[0]):
+            logger.critical("Data already cached for %s %s", station_id, parameters[0])
+            return
 
         data = [
             {"parameter": prm, "date": dat, "value": val}
@@ -71,11 +104,13 @@ class CacheDB:
         ]
 
         with self.engine.connect() as conn:
-            result = conn.execute(
+            _ = conn.execute(
                 insert(self.metadata.tables[station_id]),
                 data,
             )
             conn.commit()
+
+        self.remember_cached_variable(station_id, parameters[0])
 
     def _get(self, station_id, date, parameter):
         if not station_id in self.metadata.tables:
@@ -139,47 +174,76 @@ class CacheDB:
         return data
 
 
-def cache_parameter(date, parameter, resolution, area, wd_cache_dir, cache_db):
-    settings = Settings(cache_dir=wd_cache_dir)
+class Loader:
+    def __init__(self, area, wd_cache_dir, db_uri, obs_requests):
+        self.area = area
+        self.wd_cache_dir = wd_cache_dir
+        self.obs_requests = obs_requests
 
-    request = DwdObservationRequest(
-        parameter=parameter,
-        resolution=resolution,
-        start_date=date,
-        end_date=date + datetime.timedelta(hours=23, minutes=59, seconds=59),
-        settings=settings,
-    )
+        self.cache_db = CacheDB(db_uri)
 
-    stations = request.filter_by_bbox(*area)
+    def cache_parameter(
+        self,
+        start_date,
+        end_date,
+        parameter,
+        resolution,
+    ):
+        settings = Settings(cache_dir=self.wd_cache_dir)
 
-    logger.info("Caching %s %s for %s", parameter, resolution, date.isoformat())
-
-    for result in stations.values.query():
-        data = result.df.drop_nulls()
-
-        station_id = result.df["station_id"][0]
-
-        stp = pl.col("station_id")
-        lon = result.stations.df.filter(stp == station_id)["longitude"][0]
-        lat = result.stations.df.filter(stp == station_id)["latitude"][0]
-
-        dates = [t for t in data["date"]]
-        parameters = [x for x in data["parameter"]]
-        values = [x for x in data["value"]]
-
-        if len(dates) > 0 and len(parameters) > 0 and len(values) > 0:
-            cache_db.insert(station_id, lon, lat, parameters, dates, values)
-
-
-def cache(date, area, wd_cache_dir, db_connection, obs_requests):
-    cache_db = CacheDB(db_connection)
-    for obs_request in obs_requests:
-        cache_parameter(
-            date, area=area, wd_cache_dir=wd_cache_dir, cache_db=cache_db, **obs_request
+        request = DwdObservationRequest(
+            parameter=parameter,
+            resolution=resolution,
+            start_date=start_date,
+            end_date=end_date,
+            settings=settings,
         )
 
+        stations = request.filter_by_bbox(*self.area)
 
-def get(date, variable, longitude, latitude, db_connection, variable_translation_table):
-    cache_db = CacheDB(db_connection)
-    fvar = variable_translation_table[variable]
-    return cache_db.get(longitude, latitude, date, fvar)
+        nstations = len(stations.station_id)
+
+        logger.critical("Caching %s %s", parameter, resolution)
+
+        i = 0
+        for result in stations.values.query():
+            logger.critical("Loading station %d of %d", i, nstations)
+            i += 1
+            data = result.df.drop_nulls()
+
+            station_id = result.df["station_id"][0]
+
+            stp = pl.col("station_id")
+            lon = result.stations.df.filter(stp == station_id)["longitude"][0]
+            lat = result.stations.df.filter(stp == station_id)["latitude"][0]
+
+            dates = [t for t in data["date"]]
+            parameters = [x for x in data["parameter"]]
+            values = [x for x in data["value"]]
+
+            if len(dates) > 0 and len(parameters) > 0 and len(values) > 0:
+                self.cache_db.insert(station_id, lon, lat, parameters, dates, values)
+
+    def cache(self, start_date, end_date):
+        for obs_request in self.obs_requests:
+            self.cache_parameter(
+                start_date,
+                end_date,
+                **obs_request,
+            )
+
+
+class Getter:
+    def __init__(self, db_uri, variable_translation_table):
+        self.variable_translation_table = variable_translation_table
+        self.cacheDB = CacheDB(db_uri)
+
+    def get(
+        self,
+        date,
+        variable,
+        longitude,
+        latitude,
+    ):
+        fvar = self.variable_translation_table[variable]
+        return self.cacheDB.get(longitude, latitude, date, fvar)

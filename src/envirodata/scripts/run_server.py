@@ -18,7 +18,7 @@ app = FastAPI()
 
 config = get_config("config.yaml")
 
-geocoder = Geocoder(config["geocoder"])
+geocoder = Geocoder(**config["geocoder"])
 environment = Environment(config["environment"])
 
 
@@ -33,7 +33,7 @@ def main():
     ):
         # (1) geocode address
         try:
-            longitude, latitude = geocoder.coords_from_address(
+            longitude, latitude = geocoder.geocode(
                 postcode, city, streetname, house_number, extension
             )
         except RuntimeError as exc:
@@ -47,7 +47,7 @@ def main():
 
         return env
 
-    uvicorn.run("envirodata.scripts.server:app")
+    uvicorn.run("envirodata.scripts.run_server:app")
 
 
 if __name__ == "__main__":

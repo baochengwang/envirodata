@@ -1,14 +1,9 @@
 period:
   start_date: "2023-01-01T00:00:00"
-  end_date: "2023-01-07T00:00:00"
+  end_date: "2024-01-01T00:00:00"
 
 geocoder:
-  database:
-    user: "envirodata"
-    password: "envirodata"
-    host: "127.0.0.1"
-    port: "5432"
-    database: "geocoding"
+  url: "http://localhost:8080/search.php"
 
 environment:
   domain:
@@ -18,14 +13,13 @@ environment:
     latmax: &latmax 55.18
   services:
       - label: "DWD"
-        variables: [ "T_2m", "Td_2m", "WSPD_10m", "PMSL", "PREC" ]
+        variables: [ "WGUST_10m", "PREC", "Tmean_2m", "Tmax_2m", "Tmin_2m", "RH" ]
         input:
           module: "envirodata.services.wetterdienst"
-          method: "cache"
           config:
             area: [ *lonmin, *latmin, *lonmax, *latmax ]
             wd_cache_dir: "cache/wetterdienst/"
-            db_connection: &DWD_CACHE_DB_PATH "sqlite+pysqlite:///cache/dwd.sqlite3"
+            db_uri: &DWD_CACHE_DB_URI "sqlite+pysqlite:///cache/dwd.sqlite3"
             obs_requests:
               - parameter: "wind_gust_max"
                 resolution: "daily"
@@ -41,20 +35,19 @@ environment:
                 resolution: "daily"
         output:
           module: "envirodata.services.wetterdienst"
-          method: "get"
           config:
-            db_connection: *DWD_CACHE_DB_PATH
+            db_uri: *DWD_CACHE_DB_URI
             variable_translation_table:
+              "WGUST_10m": "wind_gust_max"
               "PREC": "precipitation_height"
-              "T_2m": "temperature_air_mean_200"
-              "Td_2m": "temperature_dew_point_mean_200"
-              "PMSL": pressure_air_sea_level"
-              "WSPD_10m": "wind_speed"
+              "Tmean_2m": "temperature_air_mean_200"
+              "Tmax_2m": "temperature_air_max_200"
+              "Tmin_2m": "temperature_air_min_200"
+              "RH": "humidity"
       - label: "CAMS"
         variables: [ "PM2.5", "O3", "NO2"]
         input:
           module: "envirodata.services.cdsapi"
-          method: "download"
           config:
             dataset: "cams-europe-air-quality-forecasts"
             request:
@@ -81,7 +74,6 @@ environment:
             # cdskey: ...
         output:
           module: "envirodata.services.cdsapi"
-          method: "get"
           config:
             cache_fpath_pattern: *CAMS_CACHE_PATH_PATTERN
             time_calculation: "time_since_analysis"
@@ -93,7 +85,6 @@ environment:
         variables: [ "U_10m", "V_10m", "Td_2m", "T_2m" ]
         input:
           module: "envirodata.services.cdsapi"
-          method: "download"
           config:
             dataset: "reanalysis-era5-land"
             request:
@@ -119,7 +110,6 @@ environment:
             cdskey: "284751:ab892a4c-2eaa-4f3e-84c7-e973c840169a"
         output:
           module: "envirodata.services.cdsapi"
-          method: "get"
           config:
             cache_fpath_pattern: *ERA5_LAND_CACHE_PATH_PATTERN
             time_calculation: "hours_since_epoch"
