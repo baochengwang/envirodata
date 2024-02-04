@@ -30,27 +30,37 @@ def main() -> None:
     """
 
     @app.get("/")
-    def code(
+    def retrieve(
+        date: datetime.datetime,
+        address: str,
+    ):
+
+        # (1) geocode address
+        try:
+            longitude, latitude = geocoder.geocode(address)
+        except RuntimeError as exc:
+            raise RuntimeError("Geocoding address failed: ", exc) from exc
+
+        # (2) get environmental factors
+        env = environment.get(date, longitude, latitude)
+
+        env.update({"longitude": longitude, "latitude": latitude})
+
+        return env
+
+    @app.get("/by_elements")
+    def retrieve_by_elements(
+        date: datetime.datetime,
         postcode: str,
         city: str,
         streetname: str,
         house_number: str = "",
         extension: str = "",
     ):
-        # (1) geocode address
-        try:
-            longitude, latitude = geocoder.geocode(
-                postcode, city, streetname, house_number, extension
-            )
-        except RuntimeError as exc:
-            raise RuntimeError("Geocoding address failed: ", exc) from exc
-
-        # (2) get environmental factors
-        env = environment.get(datetime.datetime(2023, 1, 2), longitude, latitude)
-
-        env.update({"longitude": longitude, "latitude": latitude})
-
-        return env
+        address = geocoder.standardize_address(
+            postcode, city, streetname, house_number, extension
+        )
+        return retrieve(date, address)
 
     uvicorn.run("envirodata.scripts.run_server:app")
 

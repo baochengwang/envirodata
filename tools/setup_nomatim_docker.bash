@@ -1,4 +1,4 @@
-# https://github.com/mediagis/nominatim-docker/tree/master/4.3
+# from https://github.com/mediagis/nominatim-docker/tree/master/4.3
 
 docker run -it \
   -e PBF_URL=https://download.geofabrik.de/europe/germany/bayern-latest.osm.pbf \
@@ -7,6 +7,4 @@ docker run -it \
   --name nominatim \
   mediagis/nominatim:4.3
 
-# http://localhost:8080/search.php?q=avenue%20pasteur
-
-# nomatim pw qaIACxO6wMR3
+# nomatim pw for reference: qaIACxO6wMR3

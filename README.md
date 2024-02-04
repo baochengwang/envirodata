@@ -1,6 +1,6 @@
 # EnviroData Project
 
-This is the script repository to build up a geocoding service based on PostgreSQL in the framework of the Intramural Project -- "EnviroData". 
+Provide geocoded environmental factor attribution for health care applications.
 
 It provides a Python package called `envirodata`.
 
@@ -9,9 +9,7 @@ It provides a Python package called `envirodata`.
  1) Install [docker](https://www.docker.com).
  2) Install [poetry](http://poetry.eustace.io).
  3) Clone repo into folder called `WORKPATH` from here on.
- 4) Setup dockerized PostGIS server for geocoding
-    1) create a slimmed down version of your Hauskoordinaten `.csv` file (might need to use [test data](https://www.ldbv.bayern.de/produkte/kataster/hauskoordinaten.html) or ask Christoph / Bin) using `tools/geocoding_server/trim_hauskoordinaten.sh`.
-    2) create docker container with PostGIS by following calls in `tools/geocoding_server/create_postgres_server.bash`. 
+ 4) Setup and start dockerized Nomatim geocoder (`tools/setup_nomatim_docker.bash`) 
  5) Create poetry environment and install packages
     1) go to `WORKPATH`
     2) run `poetry install`
@@ -36,6 +34,10 @@ For development, usage without actually installing the package works through cal
 
     Runs a [FastAPI](https://fastapi.tiangolo.com) server,uses `src/envirodata/Geocoder.py` to geocode address requests, and requests environmental parameters from `src/envirodata/Environment.py`.
 
+ 3) Test it out
+
+    Once you cached data and run the server, you can test the API by pointing your browser to http://localhost:8000/docs.
+
 ## Services implemented
 
 ### CDSAPI
@@ -50,6 +52,8 @@ Get station observations from DWD using the [wetterdienst](https://wetterdienst.
 
 Station data is cached into a local (sqlite3 file-) database.
 
+## Documentation
 
+[Sphinx](https://www.sphinx-doc.org/en/master/) API documentation can be created using `tools/build_docs.bash`, and then be found at `docs/_build/index.html`.
 
 

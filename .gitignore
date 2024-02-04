@@ -7,3 +7,4 @@ Untitled*.ipynb
 sandbox
 .env
 cache/*
+docs/_build/*
