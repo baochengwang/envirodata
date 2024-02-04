@@ -1,3 +1,5 @@
+"""Envirodata service for Copernicus cdsapi datasets."""
+
 import os
 import logging
 import datetime
@@ -11,14 +13,29 @@ logger = logging.getLogger(__name__)
 
 
 class Loader:
+    """Load (cache) cdsapi dataset."""
+
     def __init__(
         self,
-        dataset,
-        request,
-        output_fpath_pattern,
-        cdsurl=os.environ.get("CDSAPI_URL"),
-        cdskey=os.environ.get("CDSAPI_KEY"),
-    ):
+        dataset: str,
+        request: dict,
+        output_fpath_pattern: str,
+        cdsurl: str = os.environ.get("CDSAPI_URL"),
+        cdskey: str = os.environ.get("CDSAPI_KEY"),
+    ) -> None:
+        """Load (cache) cdsapi dataset.
+
+        :param dataset: name of the dataset in cdsapi
+        :type dataset: str
+        :param request: request parameters (from ADS/CDS)
+        :type request: dict
+        :param output_fpath_pattern: path to output file (including strftime date placeholders)
+        :type output_fpath_pattern: str
+        :param cdsurl: cdsapi url, defaults to os.environ.get("CDSAPI_URL")
+        :type cdsurl: str, optional
+        :param cdskey: cdsapi key, defaults to os.environ.get("CDSAPI_KEY")
+        :type cdskey: str, optional
+        """
         self.dataset = dataset
         self.request = request
         self.output_fpath_pattern = output_fpath_pattern
@@ -27,18 +44,31 @@ class Loader:
 
     def load(
         self,
-        start_date,
-        end_date,
-    ):
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
+    ) -> None:
+        """Load (cache) all data between given dates.
+
+        :param start_date: First date to load
+        :type start_date: datetime.datetime
+        :param end_date: Last date to load
+        :type end_date: datetime.datetime
+        """
         cur_date = start_date
         while cur_date <= end_date:
-            self.download_date(cur_date)
+            self._download_date(cur_date)
             cur_date += datetime.timedelta(days=1)
 
-    def download_date(
+    def _download_date(
         self,
-        date,
-    ):
+        date: datetime.datetime,
+    ) -> None:
+        """Load (cache) data for a single date.
+
+        :param date: Date to load
+        :type date: datetime.datetime
+        :raises IOError: Downloading data failed.
+        """
         output_fname = date.strftime(self.output_fpath_pattern)
 
         output_dir = os.path.dirname(output_fname)
@@ -73,16 +103,30 @@ class Loader:
             nc = netCDF4.Dataset(output_fname)
             nc.close()
         except Exception as exc:
-            raise IOError("No data found for {:s}!".format(date.isoformat())) from exc
+            raise IOError(f"No data found for {date.isoformat()}!") from exc
 
 
 class Getter:
+    """Get values from dataset."""
+
     def __init__(
         self,
-        cache_fpath_pattern,
-        time_calculation,
-        variable_translation_table,
+        cache_fpath_pattern: str,
+        time_calculation: str,
+        variable_translation_table: dict,
     ):
+        """Get values from dataset.
+
+        :param cache_fpath_pattern: File path pattern in cache (with datetime.strftime date
+        placeholders, should match output_fpath_pattern in Loader)
+        :type cache_fpath_pattern: str
+        :param time_calculation: How to calculate date from NetCDF time variable
+        (name of option in self.time_calculators)
+        :type time_calculation: str
+        :param variable_translation_table: Translation table from file variable name to name in Envirodata API.
+        :type variable_translation_table: dict
+        :raises IOError: Unable to find appropriate method to compute time.
+        """
         self.cache_fpath_pattern = cache_fpath_pattern
         self.variable_translation_table = variable_translation_table
 
@@ -90,16 +134,38 @@ class Getter:
             "time_since_analysis": self._calc_time_since_analysis,
             "hours_since_epoch": self._calc_time_epoch,
         }
+        if not time_calculation in time_calculators:
+            raise ValueError("Unknown method to compute time.")
         self.calc_time = time_calculators[time_calculation]
 
-    def _calc_time_since_analysis(self, date, nc):
+    def _calc_time_since_analysis(
+        self, date: datetime.datetime, nc: netCDF4.Dataset
+    ) -> list:
+        """Calculate time from netCDF4 file as seconds since midnight of the current day.
+
+        :param date: Date to process
+        :type date: datetime.datetime
+        :param nc: NetCDF4 file
+        :type nc: netCDF4.Dataset
+        :return: List of datetimes in file
+        :rtype: list
+        """
         return [
             date.replace(hour=0, minute=0, second=0)
             + datetime.timedelta(hours=float(x))
             for x in nc.variables["time"][:]
         ]
 
-    def _calc_time_epoch(self, date, nc):
+    def _calc_time_epoch(self, date: datetime.datetime, nc: netCDF4.Dataset) -> list:
+        """Calculate time from netCDF4 file based on time variable attributes.
+
+        :param date: Date to process
+        :type date: datetime.datetime
+        :param nc: NetCDF4 file
+        :type nc: netCDF4.Dataset
+        :return: List of datetimes in file
+        :rtype: list
+        """
         return netCDF4.num2date(
             nc.variables["time"],
             nc.variables["time"].units,
@@ -109,11 +175,27 @@ class Getter:
 
     def get(
         self,
-        date,
-        variable,
-        longitude,
-        latitude,
-    ):
+        date: datetime.datetime,
+        longitude: float,
+        latitude: float,
+        variable: str,
+    ) -> float:
+        """Get value for variable out of cached NetCDF4 file
+
+        :param date: Date to retrieve
+        :type date: datetime.datetime
+        :param longitude: Geographical longitude
+        :type longitude: float
+        :param latitude: Geographical latitude
+        :type latitude: float
+        :param variable: Variable to retrieve
+        :type variable: str
+        :raises IOError: No data found
+        :raises RuntimeError: Unknown number of dimensions in netCDF4 file
+        :raises RuntimeError: Unable to get data
+        :return: Value for variable at given point in time and space.
+        :rtype: float
+        """
         output_fname = date.strftime(self.cache_fpath_pattern)
 
         try:

@@ -1,20 +1,71 @@
-import re  # regular expression to handle non-standard addresss input
+"""Main Geocoding interface"""
+
 import logging  # for error message reporting
 
 import requests
 
-# error message
 logger = logging.getLogger()
 
 
 class Geocoder:
-    def __init__(self, url):
+    """Geocoder interface"""
+
+    def __init__(self, url: str) -> None:
         self.url = url
 
-    def standardize_address(self, postcode, city, streetname, house_number, extension):
+    def standardize_address(
+        self,
+        postcode: str,
+        city: str,
+        streetname: str,
+        house_number: str,
+        extension: str = "",
+    ) -> str:
+        """Generate a single address string to use in geocoding server
+        requests out of parts of an address.
+
+        :param postcode: Postcode
+        :type postcode: str
+        :param city: City
+        :type city: str
+        :param streetname: Street name
+        :type streetname: str
+        :param house_number: House number
+        :type house_number: str
+        :param extension: Address extension, defaults to ""
+        :type extension: str, optional
+        :return: Full address
+        :rtype: str
+        """
+
         return f"{streetname} {house_number} {extension}, {postcode} {city}"
 
-    def geocode(self, postcode, city, streetname, house_number, extension):
+    def geocode(
+        self,
+        postcode: str,
+        city: str,
+        streetname: str,
+        house_number: str,
+        extension: str = "",
+    ) -> (float, float):
+        """Geocode an address and return coordinates
+
+        :param postcode: Postcode
+        :type postcode: str
+        :param city: City
+        :type city: str
+        :param streetname: Street name
+        :type streetname: str
+        :param house_number: House number
+        :type house_number: str
+        :param extension: Address extension, defaults to ""
+        :type extension: str, optional
+        :raises IOError: JSON response is malformed
+        :raises IOError: Address could not be geocoded
+        :return: Coordinates (longitude, latitude) of the geocoded address
+        :rtype: float, float
+        """
+
         address = self.standardize_address(
             postcode, city, streetname, house_number, extension
         )
