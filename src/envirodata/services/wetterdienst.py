@@ -351,7 +351,7 @@ class Loader:
             if len(dates) > 0 and len(parameters) > 0 and len(values) > 0:
                 self.cache_db.insert(station_id, lon, lat, parameters, dates, values)
 
-    def cache(self, start_date: datetime.datetime, end_date: datetime.datetime) -> None:
+    def load(self, start_date: datetime.datetime, end_date: datetime.datetime) -> None:
         """Cache all obs_request sets for given date range.
 
         :param start_date: First date to cache
