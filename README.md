@@ -52,6 +52,12 @@ Get station observations from DWD using the [wetterdienst](https://wetterdienst.
 
 Station data is cached into a local (sqlite3 file-) database.
 
+### GeoTIFF
+
+Get arbitrary GeoTIFF datasets (without any time dependence) using [rasterio](https://rasterio.readthedocs.io/en/stable/).
+
+GeoTIFF data is cached by copying the files into the cache directory.
+
 ## Documentation
 
 [Sphinx](https://www.sphinx-doc.org/en/master/) API documentation can be created using `tools/build_docs.bash`, and then be found at `docs/_build/index.html`.
