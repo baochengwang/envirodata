@@ -9,10 +9,12 @@ import cdsapi
 import netCDF4
 import numpy as np
 
+from envirodata.services.base import BaseLoader, BaseGetter
+
 logger = logging.getLogger(__name__)
 
 
-class Loader:
+class Loader(BaseLoader):
     """Load (cache) cdsapi dataset."""
 
     def __init__(
@@ -106,7 +108,7 @@ class Loader:
             raise IOError(f"No data found for {date.isoformat()}!") from exc
 
 
-class Getter:
+class Getter(BaseGetter):
     """Get values from dataset."""
 
     def __init__(
