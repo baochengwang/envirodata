@@ -6,6 +6,7 @@ import datetime
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse as JSONResponse
 
 from envirodata.geocoder import Geocoder
 from envirodata.environment import Environment
@@ -44,9 +45,7 @@ def main() -> None:
         # (2) get environmental factors
         env = environment.get(date, longitude, latitude)
 
-        env.update({"longitude": longitude, "latitude": latitude})
-
-        return env
+        return JSONResponse(env)
 
     @app.get("/by_elements")
     def retrieve_by_elements(
