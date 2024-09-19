@@ -32,7 +32,7 @@ class CacheDB:
         :param time_buffer: Buffer to consider when searching for a given time. Optional, defaults to 1 day
         :type time_buffer: datetime.timedelta
         """
-        logger.critical("Setting up cache DB at %s", db_uri)
+        logger.debug("Setting up cache DB at %s", db_uri)
         self.engine = create_engine(
             db_uri, echo=logger.getEffectiveLevel() == logging.DEBUG
         )
