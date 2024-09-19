@@ -1,9 +1,11 @@
-"""Enivrodata utilities."""
+"""Envirodata utilities."""
+
+from typing import Callable
 
 import os
 import importlib
 
-import confuse
+import confuse  # type: ignore
 
 
 def get_config(config_fpath: str) -> confuse.Configuration:
@@ -26,7 +28,7 @@ def get_config(config_fpath: str) -> confuse.Configuration:
 
 
 def load_object(modulename: str, objname: str) -> object:
-    """Load python object (class, method, ...) identified by its
+    """Load python object identified by its
     module and name.
 
     :param modulename: Name of the module to search in
@@ -47,5 +49,25 @@ def load_object(modulename: str, objname: str) -> object:
         obj = getattr(module, objname)
     except Exception as exc:
         raise IOError(f"Loading object {objname} from {modulename} failed.") from exc
+
+    return obj
+
+
+def load_callable(modulename: str, objname: str) -> Callable:
+    """Load python callable (class, method, ...) identified by its
+    module and name.
+
+    :param modulename: Name of the module to search in
+    :type modulename: str
+    :param objname: Name of the callable object
+    :type objname: str
+    :raises IOError: Loaded object is not callable
+    :return: Callable
+    :rtype: Callable
+    """
+    obj = load_object(modulename, objname)
+
+    if not callable(obj):
+        raise IOError(f"Object {objname} from {modulename} is not callable.")
 
     return obj

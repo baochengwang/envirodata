@@ -1,6 +1,6 @@
 period:
   start_date: "2023-01-01T00:00:00"
-  end_date: "2024-01-01T00:00:00"
+  end_date: "2023-02-01T00:00:00"
 
 geocoder:
   url: "http://localhost:8080/search.php"
@@ -12,6 +12,28 @@ environment:
     latmin: &latmin 47.07
     latmax: &latmax 55.18
   services:
+    - label: "AirBASE"
+      variables: [ "CO", "O3", "NO2", "SO2", "NH3", "HCHO", "PM1", "PM2.5", "PM10" ]
+      input:
+        module: "envirodata.services.airbase"
+        config:
+          cache_path: &AIRBASE_CACHE_PATH "cache/airbase/"
+          pollutants: [ "CO", "O3", "NO2", "SO2", "NH3", "PM1", "PM2.5", "PM10", "HCHO" ]
+          countries: &AIRBASE_COUNTRY_LIST [ "DE" ]
+      output:
+        module: "envirodata.services.airbase"
+        config:
+          cache_path: *AIRBASE_CACHE_PATH
+          variable_translation_table:
+            "CO": "CO" 
+            "O3": "O3" 
+            "NO2": "NO2"
+            "SO2": "SO2"
+            "NH3": "NH3"
+            "HCHO": "HCHO"
+            "PM1": "PM1"
+            "PM2.5": "PM2.5"
+            "PM10": "PM10"
     - label: "Noise_mapping"
       variables: [ "NOISE_DAY", "NOISE_NIGHT" ]
       input:
@@ -30,8 +52,7 @@ environment:
       input:
         module: "envirodata.services.wetterdienst"
         config:
-          area: [ *lonmin, *latmin, *lonmax, *latmax ]
-          wd_cache_dir: "cache/wetterdienst/"
+          rest_api_url: "http://localhost:7890/api"
           db_uri: &DWD_CACHE_DB_URI "sqlite+pysqlite:///cache/dwd.sqlite3"
           obs_requests:
             - parameter: "wind_gust_max"
@@ -46,6 +67,7 @@ environment:
               resolution: "daily"
             - parameter: "humidity"
               resolution: "daily"
+          bbox: [ *lonmin, *latmin, *lonmax, *latmax ]
       output:
         module: "envirodata.services.wetterdienst"
         config:
@@ -131,8 +153,3 @@ environment:
             "V_10m": "v10"
             "Td_2m": "d2m"
             "T_2m":  "t2m"
-
-
-
-
-

@@ -4,9 +4,10 @@ import logging
 from collections import OrderedDict
 import datetime
 
-import confuse
+import confuse  # type: ignore
 
-from envirodata.utils.general import load_object
+from envirodata.utils.general import load_callable
+from envirodata.services.base import BaseGetter, BaseLoader
 
 logger = logging.getLogger()
 
@@ -23,13 +24,13 @@ class Service:
         information on input and output config.
         :type config: dict | OrderedDict | confuse.Configuration
         """
-        self.variables = config["variables"]
+        self.variables: list[str] = config["variables"]
 
-        input_class = load_object(config["input"]["module"], "Loader")
-        self._loader = input_class(**config["input"]["config"])
+        self._loader: None | BaseLoader = None
+        self._loader_config = config["input"]
 
-        output_class = load_object(config["output"]["module"], "Getter")
-        self._getter = output_class(**config["output"]["config"])
+        self._getter: None | BaseGetter = None
+        self._getter_config = config["output"]
 
     def load(self, start_date: datetime.datetime, end_date: datetime.datetime) -> None:
         """Load / cache data for this service.
@@ -39,6 +40,10 @@ class Service:
         :param end_date: End of time period to load.
         :type end_date: datetime.datetime
         """
+        if self._loader is None:
+            input_class = load_callable(self._loader_config["module"], "Loader")
+            self._loader = input_class(**self._loader_config["config"])
+
         self._loader.load(start_date, end_date)
 
     def get(
@@ -46,7 +51,7 @@ class Service:
         date: datetime.datetime,
         longitude: float,
         latitude: float,
-        variables: list = None,
+        variables: list | None = None,
     ) -> dict:
         """Retrieve values for (a subset of) the variables in this dataset at
         a given point in time and space.
@@ -62,6 +67,10 @@ class Service:
         :return: Values of all requested variables
         :rtype: dict
         """
+        if self._getter is None:
+            output_class = load_callable(self._getter_config["module"], "Getter")
+            self._getter = output_class(**self._getter_config["config"])
+
         if not variables:
             variables = self.variables
 
@@ -77,7 +86,7 @@ class Environment:
     """Environmental factors interface"""
 
     def __init__(self, config: dict | OrderedDict | confuse.Configuration) -> None:
-        self.services = {}
+        self.services: dict[str, Service] = {}
         self.register_services(config["services"])
 
     def register_services(
@@ -90,10 +99,12 @@ class Environment:
         :type config: dict | OrderedDict | confuse.Configuration
         """
         for service_config in config:
+            logger.info("Registered service %s", service_config["label"])
             self.services[service_config["label"]] = Service(service_config)
 
     def load(self, start_date: datetime.datetime, end_date: datetime.datetime) -> None:
-        """Load (download, cache) all environmental factor data between start date and end date.
+        """Load (download, cache) all environmental factor data between start date
+        and end date.
 
         :param start_date: First date to load
         :type start_date: datetime.datetime
@@ -109,7 +120,7 @@ class Environment:
         date: datetime.datetime,
         longitude: float,
         latitude: float,
-        variables: list = None,
+        variables: list | None = None,
     ) -> dict:
         """Retrieve values for (a subset of) all known variables at
         a given point in time and space.
@@ -127,10 +138,18 @@ class Environment:
         """
         result = {}
         for servicename, service in self.services.items():
-            result[servicename] = service.get(
-                date,
-                longitude,
-                latitude,
-                variables=variables,
-            )
+            try:
+                result[servicename] = service.get(
+                    date,
+                    longitude,
+                    latitude,
+                    variables=variables,
+                )
+                logger.debug(f"Done with {servicename}")
+            except Exception as exc:
+                logger.critical(
+                    "Could not retrieve data for service %s: %s",
+                    servicename,
+                    str(exc),
+                )
         return result

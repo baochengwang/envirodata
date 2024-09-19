@@ -15,13 +15,18 @@ config = get_config("config.yaml")
 
 environment = Environment(config["environment"])
 
-start_date = datetime.datetime.fromisoformat(config["period"]["start_date"])
-end_date = datetime.datetime.fromisoformat(config["period"]["end_date"])
+start_date = datetime.datetime.fromisoformat(config["period"]["start_date"]).astimezone(
+    datetime.UTC
+)
+end_date = datetime.datetime.fromisoformat(config["period"]["end_date"]).astimezone(
+    datetime.UTC
+)
 
 
-def main() -> None:
+def main() -> bool:
     """Load (cache) all environmental factor data for a given date range."""
     environment.load(start_date, end_date)
+    return True
 
 
 if __name__ == "__main__":

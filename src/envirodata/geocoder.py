@@ -1,6 +1,7 @@
 """Main Geocoding interface"""
 
 import logging  # for error message reporting
+from typing import Tuple
 
 import requests
 
@@ -43,7 +44,7 @@ class Geocoder:
     def geocode(
         self,
         address: str,
-    ) -> (float, float):
+    ) -> Tuple[float, float]:
         """Geocode an address and return coordinates
 
         :param address: Address string (more or less standardized)

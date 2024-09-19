@@ -14,6 +14,8 @@ from envirodata.services.base import BaseLoader, BaseGetter
 
 logger = logging.getLogger(__name__)
 
+TIME_RESOLUTION = datetime.timedelta(hours=1)
+
 
 class Loader(BaseLoader):
     """Load dataset."""
@@ -89,7 +91,11 @@ class Getter(BaseGetter):
             for name, data in self.data.items()
         }
 
-    def get(
+    @property
+    def time_resolution(self):
+        return datetime.timedelta(hours=1)
+
+    def _get(
         self,
         date: datetime.datetime,
         longitude: float,

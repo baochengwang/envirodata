@@ -63,3 +63,7 @@ GeoTIFF data is cached by copying the files into the cache directory.
 [Sphinx](https://www.sphinx-doc.org/en/master/) API documentation can be created using `tools/build_docs.bash`, and then be found at `docs/_build/index.html`.
 
 
+# Tipps and tricks
+
+After installing poetry and making sure its installation location (e.g., `~/.local/bin`) is in `$PATH`, you might need to log out and log in again, before the correct poetry is picked up.
+

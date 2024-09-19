@@ -5,6 +5,9 @@ description = "Service to associate points in time and space with environmental 
 authors = ["Christoph Knote <christoph.knote@med.uni-augsburg.de>"]
 license = "GPL-3.0-or-later"
 readme = "README.md"
+packages = [
+    { include = "envirodata", from = "src" },
+]
 
 [tool.poetry.scripts]
 run_server = "envirodata.scripts.run_server:main"
@@ -19,12 +22,16 @@ SQLAlchemy = "^2.0.25"
 fastapi = "^0.109.0"
 uvicorn = "^0.27.0.post1"
 confuse = "^2.0.1"
-wetterdienst = "^0.74.0"
+wetterdienst = "^0.89.0"
 netcdf4 = "^1.6.5"
 rasterio = "^1.3.9"
 pyproj = "^3.6.1"
-polars = "^0.20.0"
 orjson = "^3.9.15"
+geopandas = "^0.14.4"
+matplotlib = "^3.8.4"
+pyarrow = "<16"
+polars-lts-cpu = "^0.20.25"
+requests = "^2.32.3"
 
 [tool.poetry.group.dev.dependencies]
 csvkit = "^1.3.0"
@@ -32,6 +39,7 @@ sphinx = "^7.2.6"
 sphinx-rtd-theme = "^2.0.0"
 enum-tools = "^0.11.0"
 sphinx-toolbox = "^3.5.0"
+mypy = "^1.11.2"
 
 [build-system]
 requires = ["poetry-core"]
