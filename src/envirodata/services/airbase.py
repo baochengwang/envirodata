@@ -9,15 +9,7 @@ import requests
 from shapely import Point  # type: ignore
 import numpy as np
 
-from envirodata.services.base import (
-    BaseGetter,
-    BaseLoader,
-    DayMinimum,
-    DayAverage,
-    DayMaximum,
-    SevenDayAverage,
-    ThirtyDayAverage,
-)
+from envirodata.services.base import BaseGetter, BaseLoader
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +43,7 @@ class Loader(BaseLoader):
         cache_path: str,
         pollutants: dict[str, str] | None = None,
         countries: list[str] | None = None,
+        bbox: list[float] | None = None,
     ) -> None:
         """Load (cache) cdsapi dataset.
 
@@ -60,6 +53,8 @@ class Loader(BaseLoader):
         :type pollutants: list, defaults to all polllutants
         :param countries: list of country abbreviations to get
         :type countries: list, defaults to all countries
+        :param bbox: list of lat/lon bounds (xmin, ymin, xmax, ymax)
+        :type bbox: list, defaults to none
         """
 
         os.makedirs(cache_path, exist_ok=True)
@@ -105,6 +100,9 @@ class Loader(BaseLoader):
             df, geometry=gp.points_from_xy(df.Longitude, df.Latitude), crs="EPSG:4326"
         )
 
+        if bbox is not None:
+            self.metadata = self.metadata.cx[bbox[0] : bbox[1], bbox[2] : bbox[3]]
+
         # make datetimes
         self.metadata["Operational Activity Begin"] = pd.to_datetime(
             self.metadata["Operational Activity Begin"], utc=True, format="mixed"
@@ -142,6 +140,10 @@ class Loader(BaseLoader):
         :type end_date: datetime.datetime
         """
 
+        if os.path.exists(self.metadata_path):
+            logger.info("AIRBASE data already downloaded.")
+            return
+
         # (1) get list of files to download
 
         apiUrl = "https://eeadmz1-downloads-api-appservice.azurewebsites.net/"
@@ -152,11 +154,11 @@ class Loader(BaseLoader):
             logger.info(f"Dataset {dataset['name']} ({dataset['dbindex']})")
             request_body = {
                 "countries": self.countries,
-                "cities": ["Augsburg"],
+                "cities": [],
                 "pollutants": [self.pollutants[x] for x in self.pollutants],
                 "dataset": dataset["dbindex"],
-                "dateTimeStart": start_date.isoformat(sep="T"),
-                "dateTimeEnd": end_date.isoformat(sep="T"),
+                # "dateTimeStart": start_date.isoformat(sep="T"),
+                # "dateTimeEnd": end_date.isoformat(sep="T"),
                 "aggregationType": "hour",
             }
 
@@ -205,6 +207,7 @@ class Getter(BaseGetter):
         self,
         cache_path: str,
         variable_translation_table: dict,
+        statistics: dict[str, list[str]],
     ):
         """Get values from dataset.
 
@@ -224,9 +227,17 @@ class Getter(BaseGetter):
 
         self.metadata = gp.read_parquet(os.path.join(self.cache_path, METADATA_FNAME))
 
+        self._variable_statistics = statistics
+
     @property
     def time_resolution(self):
+        """Time resolution of the dataset."""
         return datetime.timedelta(hours=1)
+
+    @property
+    def variable_statistics(self) -> dict[str, list[str]]:
+        """Statistics to be calculated for a given variable."""
+        return self._variable_statistics
 
     def _get(
         self,
@@ -346,8 +357,8 @@ class Getter(BaseGetter):
             data["Start"] = pd.to_datetime(data["Start"], utc=True)
             data["End"] = pd.to_datetime(data["End"], utc=True)
 
-            pretty_start_date = pd.Timestamp(start_date).tz_localize("UTC")
-            pretty_end_date = pd.Timestamp(end_date).tz_localize("UTC")
+            pretty_start_date = pd.Timestamp(start_date).tz_convert("UTC")
+            pretty_end_date = pd.Timestamp(end_date).tz_convert("UTC")
 
             data = data[
                 (data["Start"] < pretty_end_date) & (data["End"] >= pretty_start_date)

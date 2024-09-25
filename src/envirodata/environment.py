@@ -101,6 +101,7 @@ class Environment:
         for service_config in config:
             logger.info("Registered service %s", service_config["label"])
             self.services[service_config["label"]] = Service(service_config)
+        # self.services["DWD"] = Service(config[0])
 
     def load(self, start_date: datetime.datetime, end_date: datetime.datetime) -> None:
         """Load (download, cache) all environmental factor data between start date
@@ -114,6 +115,7 @@ class Environment:
         for servicename, service in self.services.items():
             logger.info("Loading data for service %s", servicename)
             service.load(start_date, end_date)
+        # self.services["DWD"].load(start_date, end_date)
 
     def get(
         self,

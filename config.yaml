@@ -1,17 +1,41 @@
 period:
-  start_date: "2023-01-01T00:00:00"
-  end_date: "2023-02-01T00:00:00"
+  start_date: "2024-01-01T00:00:00"
+  end_date: "2024-02-01T00:00:00"
 
 geocoder:
   url: "http://localhost:8080/search.php"
 
 environment:
   domain:
-    lonmin: &lonmin 5.8
-    lonmax: &lonmax 15.29
-    latmin: &latmin 47.07
-    latmax: &latmax 55.18
+    lonmin: &lonmin 8.9
+    lonmax: &lonmax 13.9
+    latmin: &latmin 47.2
+    latmax: &latmax 50.6
   services:
+    - label: "DWD"
+      variables:
+        - "precipitation"
+        - "pressure_msl"
+        - "sunshine"
+        - "temperature"
+        - "wind_direction"
+        - "wind_speed"
+        - "cloud_cover"
+        - "dew_point"
+        - "relative_humidity"
+        - "visibility"
+        - "wind_gust_direction"
+        - "wind_gust_speed"
+      input:
+        module: "envirodata.services.dwd"
+        config: {}
+      output:
+        module: "envirodata.services.dwd"
+        config:
+          api_url: "http://localhost:5000/weather"
+          statistics:
+            "precipitation": ["day_sum", "7day_sum", "30day_sum"]
+            "pressure_msl": ["day_mean", "7day_mean", "30day_mean"]
     - label: "AirBASE"
       variables: [ "CO", "O3", "NO2", "SO2", "NH3", "HCHO", "PM1", "PM2.5", "PM10" ]
       input:
@@ -20,6 +44,7 @@ environment:
           cache_path: &AIRBASE_CACHE_PATH "cache/airbase/"
           pollutants: [ "CO", "O3", "NO2", "SO2", "NH3", "PM1", "PM2.5", "PM10", "HCHO" ]
           countries: &AIRBASE_COUNTRY_LIST [ "DE" ]
+          bbox: [ *lonmin, *latmin, *lonmax, *latmax ]
       output:
         module: "envirodata.services.airbase"
         config:
@@ -34,6 +59,9 @@ environment:
             "PM1": "PM1"
             "PM2.5": "PM2.5"
             "PM10": "PM10"
+          statistics:
+            "CO": ["day_mean", "7day_mean", "30day_mean"]
+            "O3": ["day_maximum", "day_mean", "day_minimum", "7day_maximum", "30day_maximum"]
     - label: "Noise_mapping"
       variables: [ "NOISE_DAY", "NOISE_NIGHT" ]
       input:
@@ -47,38 +75,7 @@ environment:
         module: "envirodata.services.geotiff"
         config:
           cache_path: *NOISE_CACHE_PATH
-    - label: "DWD"
-      variables: [ "WGUST_10m", "PREC", "Tmean_2m", "Tmax_2m", "Tmin_2m", "RH" ]
-      input:
-        module: "envirodata.services.wetterdienst"
-        config:
-          rest_api_url: "http://localhost:7890/api"
-          db_uri: &DWD_CACHE_DB_URI "sqlite+pysqlite:///cache/dwd.sqlite3"
-          obs_requests:
-            - parameter: "wind_gust_max"
-              resolution: "daily"
-            - parameter: "precipitation_height"
-              resolution: "daily"
-            - parameter: "temperature_air_mean_200"
-              resolution: "daily"
-            - parameter: "temperature_air_max_200"
-              resolution: "daily"
-            - parameter: "temperature_air_min_200"
-              resolution: "daily"
-            - parameter: "humidity"
-              resolution: "daily"
-          bbox: [ *lonmin, *latmin, *lonmax, *latmax ]
-      output:
-        module: "envirodata.services.wetterdienst"
-        config:
-          db_uri: *DWD_CACHE_DB_URI
-          variable_translation_table:
-            "WGUST_10m": "wind_gust_max"
-            "PREC": "precipitation_height"
-            "Tmean_2m": "temperature_air_mean_200"
-            "Tmax_2m": "temperature_air_max_200"
-            "Tmin_2m": "temperature_air_min_200"
-            "RH": "humidity"
+          statistics: {}
     - label: "CAMS"
       variables: [ "PM2.5", "O3", "NO2"]
       input:
@@ -116,6 +113,7 @@ environment:
             "PM2.5": "pm2p5_conc"
             "NO2": "no2_conc"
             "O3": "o3_conc"
+          statistics: {}
     - label: "ERA5_land"
       variables: [ "U_10m", "V_10m", "Td_2m", "T_2m" ]
       input:
@@ -141,8 +139,8 @@ environment:
             area: [ *latmax, *lonmin, *latmin, *lonmax ]
             format: 'netcdf'
           output_fpath_pattern: &ERA5_LAND_CACHE_PATH_PATTERN "cache/era5_land/%Y%m%d.nc"
-          cdsurl: "https://cds.climate.copernicus.eu/api/v2"
-          cdskey: "284751:ab892a4c-2eaa-4f3e-84c7-e973c840169a"
+          # cdsurl: ...
+          # cdskey: ...
       output:
         module: "envirodata.services.cdsapi"
         config:
@@ -153,3 +151,4 @@ environment:
             "V_10m": "v10"
             "Td_2m": "d2m"
             "T_2m":  "t2m"
+          statistics: {}

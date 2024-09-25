@@ -75,7 +75,7 @@ class CacheDB:
             Column("date", TIMESTAMP),
             Column("parameter", String),
             Column("value", Float),
-            UniqueConstraint("date", "parameter"),
+            UniqueConstraint("date", "parameter", sqlite_on_conflict="REPLACE"),
         )
 
         stmt = insert(self.metadata.tables["stations"]).values(
@@ -145,7 +145,7 @@ class CacheDB:
         :param values: list of values to insert (floats)
         :type values: list
         """
-        logger.critical("Inserting data for %s %s", station_id, parameters[0])
+        logger.debug("Inserting data for %s %s", station_id, parameters[0])
 
         self.create_station_table(station_id, longitude, latitude)
         self.create_variable_table_entry(station_id, parameters[0])

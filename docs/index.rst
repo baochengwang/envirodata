@@ -29,10 +29,19 @@ API
 Services
 #########
 
-.. module:: envirodata.services.wetterdienst
+All services are derived classes of:
 
-.. autoclass:: CacheDB
+.. module:: envirodata.services.base
+
+.. autoclass:: BaseLoader
    :members:
+
+.. autoclass:: BaseGetter
+   :members:
+
+Individual services implemented:
+
+.. module:: envirodata.services.airbase
 
 .. autoclass:: Loader
    :members:
@@ -41,6 +50,22 @@ Services
    :members:
 
 .. module:: envirodata.services.cdsapi
+
+.. autoclass:: Loader
+   :members:
+
+.. autoclass:: Getter
+   :members:
+
+.. module:: envirodata.services.dwd
+
+.. autoclass:: Loader
+   :members:
+
+.. autoclass:: Getter
+   :members:
+
+.. module:: envirodata.services.geotiff
 
 .. autoclass:: Loader
    :members:

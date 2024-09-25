@@ -66,6 +66,7 @@ class Getter(BaseGetter):
     def __init__(
         self,
         cache_path,
+        statistics: dict[str, list[str]],
         output_crs="EPSG:4326",
     ):
         """Get values from cached dataset.
@@ -91,9 +92,17 @@ class Getter(BaseGetter):
             for name, data in self.data.items()
         }
 
+        self._variable_statistics = statistics
+
     @property
     def time_resolution(self):
+        """Time resolution of the dataset."""
         return datetime.timedelta(hours=1)
+
+    @property
+    def variable_statistics(self) -> dict[str, list[str]]:
+        """Statistics to be calculated for a given variable."""
+        return self._variable_statistics
 
     def _get(
         self,

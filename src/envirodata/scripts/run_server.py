@@ -3,9 +3,10 @@
 import sys
 import logging
 import datetime
+import pytz
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import ORJSONResponse as JSONResponse
 
 from envirodata.geocoder import Geocoder
@@ -23,24 +24,43 @@ config = get_config("config.yaml")
 geocoder = Geocoder(**config["geocoder"])
 environment = Environment(config["environment"])
 
+start_date = datetime.datetime.fromisoformat(config["period"]["start_date"])
+if start_date.tzinfo is None:
+    start_date = start_date.replace(tzinfo=pytz.UTC)
+
+end_date = datetime.datetime.fromisoformat(config["period"]["end_date"])
+if end_date.tzinfo is None:
+    end_date = end_date.replace(tzinfo=pytz.UTC)
+
 
 def main() -> None:
-    """Envirodata REST-API.
-
-    :raises RuntimeError: Unable to geocode address.
-    """
+    """Envirodata REST-API."""
 
     @app.get("/")
     def retrieve(
         date: datetime.datetime,
         address: str,
     ):
+        """Retrieve environmental factors for a given date and address."""
+        if date.tzinfo is None:
+            logger.critical("Requested date not timezone-aware, assuming UTC!")
+            date = date.replace(tzinfo=pytz.UTC)
+
+        # (0) check date in range?
+        if (date < start_date) or (date > end_date):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Requested date out of cached range ({start_date} - {end_date})",
+            )
 
         # (1) geocode address
         try:
             longitude, latitude = geocoder.geocode(address)
         except RuntimeError as exc:
-            raise RuntimeError("Geocoding address failed: ", exc) from exc
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Geocoding address failed: {str(exc)}",
+            ) from exc
 
         # (2) get environmental factors
         env = environment.get(date, longitude, latitude)
@@ -56,6 +76,8 @@ def main() -> None:
         house_number: str = "",
         extension: str = "",
     ):
+        """Retrieve environmental factors for a given date and address (as individual
+        elements)."""
         address = geocoder.standardize_address(
             postcode, city, streetname, house_number, extension
         )
