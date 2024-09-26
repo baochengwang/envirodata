@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import logging
 import os
+import copy
 
 import geopandas as gp  # type: ignore
 import pandas as pd
@@ -245,7 +246,7 @@ class Getter(BaseGetter):
         longitude: float,
         latitude: float,
         variable: str,
-    ) -> float:
+    ) -> tuple[datetime.datetime, float]:
         """Get value for variable out of cached NetCDF4 file
 
         :param date: Date to retrieve
@@ -263,8 +264,8 @@ class Getter(BaseGetter):
         :rtype: float
         """
 
-        result = self._get_range(date, date, longitude, latitude, variable)
-        return result[0]
+        times, values = self._get_range(date, date, longitude, latitude, variable)
+        return times[0], values[0]
 
     def _get_range(
         self,
@@ -273,7 +274,7 @@ class Getter(BaseGetter):
         longitude: float,
         latitude: float,
         variable: str,
-    ) -> list[float]:
+    ) -> tuple[list[datetime.datetime], list[float]]:
         """Get value for variable out of cached NetCDF4 file
 
         :param date: Date to retrieve
@@ -287,8 +288,8 @@ class Getter(BaseGetter):
         :raises IOError: No data found
         :raises RuntimeError: Unknown number of dimensions in netCDF4 file
         :raises RuntimeError: Unable to get data
-        :return: Value for variable at given point in time and space.
-        :rtype: float
+        :return: Times and Values for variable at given point in time and space.
+        :rtype: tuple[list[datetime.datetime], list[float]]
         """
 
         # name as used in dataset
@@ -311,13 +312,13 @@ class Getter(BaseGetter):
         ]
 
         if ds.empty:
-            return [np.nan]
+            return [start_date], [np.nan]
 
         # and only stations that actually measure that pollutant
         ds = ds[ds["Air Pollutant"] == pl]
 
         if ds.empty:
-            return [np.nan]
+            return [start_date], [np.nan]
 
         # and only stations that we have cached in any of the datasets
         hasCachedData = ds["Country"].isna()
@@ -329,7 +330,7 @@ class Getter(BaseGetter):
         ds = ds[hasCachedData]
 
         if ds.empty:
-            return [np.nan]
+            return [start_date], [np.nan]
 
         # OK - there should be something!
 
@@ -345,6 +346,7 @@ class Getter(BaseGetter):
         station = stationRow[stationId]
 
         result = [np.nan]
+        times = [copy.copy(start_date)]
 
         highest_prio_found: int = 0
         for dataset in DATASETS:
@@ -361,7 +363,7 @@ class Getter(BaseGetter):
             pretty_end_date = pd.Timestamp(end_date).tz_convert("UTC")
 
             data = data[
-                (data["Start"] < pretty_end_date) & (data["End"] >= pretty_start_date)
+                (data["Start"] < pretty_end_date) & (data["End"] > pretty_start_date)
             ]
 
             # only valid measurements! https://dd.eionet.europa.eu/vocabulary/aq/observationvalidity
@@ -374,6 +376,7 @@ class Getter(BaseGetter):
             if dataset["priority"] > highest_prio_found:
                 tmp = data.Value.tolist()
                 result = [float(x) for x in tmp]
+                times = data.Start.tolist()
                 highest_prio_found = dataset["priority"]
 
-        return result
+        return times, result

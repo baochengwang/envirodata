@@ -117,7 +117,7 @@ class Getter(BaseGetter):
         longitude: float,
         latitude: float,
         variable: str,
-    ) -> list[float]:
+    ) -> tuple[list[datetime.datetime], list[float]]:
         """Get value for variable out of cache DB
 
         :param date: Date to retrieve
@@ -138,6 +138,7 @@ class Getter(BaseGetter):
         data = self._load_json_from_api(_start_date, _end_date, longitude, latitude)
 
         result = []
+        times = []
 
         if "weather" in data:
             for step_data in data["weather"]:
@@ -145,6 +146,9 @@ class Getter(BaseGetter):
                     value = step_data[variable]
                     try:
                         result.append(float(value))
+                        times.append(
+                            datetime.datetime.fromisoformat(step_data["timestamp"])
+                        )
                     except ValueError:
                         logger.debug("Could not cast result for %s as float", variable)
                     except TypeError:
@@ -152,7 +156,7 @@ class Getter(BaseGetter):
                     except OverflowError:
                         logger.debug("Could not cast result for %s as float", variable)
 
-        return result
+        return times, result
 
     def _get(
         self,
@@ -160,7 +164,7 @@ class Getter(BaseGetter):
         longitude: float,
         latitude: float,
         variable: str,
-    ) -> float:
+    ) -> tuple[datetime.datetime, float]:
         """Get value for variable out of cache DB
 
         :param date: Date to retrieve
@@ -175,9 +179,9 @@ class Getter(BaseGetter):
         :rtype: float
         """
 
-        data = self._get_range(date, date, longitude, latitude, variable)
+        times, data = self._get_range(date, date, longitude, latitude, variable)
 
         if len(data) > 0:
-            return data[0]
+            return times[0], data[0]
         else:
-            return np.nan
+            return date, np.nan

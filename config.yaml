@@ -34,8 +34,54 @@ environment:
         config:
           api_url: "http://localhost:5000/weather"
           statistics:
-            "precipitation": ["day_sum", "7day_sum", "30day_sum"]
-            "pressure_msl": ["day_mean", "7day_mean", "30day_mean"]
+            precipitation:
+              - day_sum
+            pressure_msl:
+              - current
+              - 24h_max_3h_delta
+              - 5day_max_3h_delta
+            sunshine:
+              - day_sum
+            temperature:
+              - current
+              - 24h_amplitude
+              - 3day_mean_day_max
+              - 3day_max_day_max
+              - 3day_mean_day_min
+              - 3day_min_day_min
+              - 7day_mean_day_max
+              - 7day_max_day_max
+              - 7day_mean_day_min
+              - 7day_min_day_min            
+            wind_direction:
+              - current
+            wind_speed:
+              - current
+              - 3day_mean
+              - 7day_mean
+            cloud_cover:
+              - current
+            dew_point:
+              - current
+            relative_humidity:
+              - current
+              - 24h_amplitude
+              - 3day_mean_day_max
+              - 3day_max_day_max
+              - 3day_mean_day_min
+              - 3day_min_day_min
+              - 7day_mean_day_max
+              - 7day_max_day_max
+              - 7day_mean_day_min
+              - 7day_min_day_min
+            visibility:
+              - current
+            wind_gust_direction:
+              - current
+            wind_gust_speed:
+              - current
+              - 3day_mean
+              - 7day_mean
     - label: "AirBASE"
       variables: [ "CO", "O3", "NO2", "SO2", "NH3", "HCHO", "PM1", "PM2.5", "PM10" ]
       input:
@@ -60,8 +106,52 @@ environment:
             "PM2.5": "PM2.5"
             "PM10": "PM10"
           statistics:
-            "CO": ["day_mean", "7day_mean", "30day_mean"]
-            "O3": ["day_maximum", "day_mean", "day_minimum", "7day_maximum", "30day_maximum"]
+            CO:
+              - current
+              - day_mean
+              - day_max
+              - 3day_mean
+              - 3day_max
+              - 7day_mean
+              - 7day_max
+            O3:
+              - current
+              - mda8
+              - 3day_mean_mda8
+              - 7day_mean_mda8
+              - day_min
+              - day_mean
+              - day_max
+              - 3day_min
+              - 3day_mean
+              - 3day_max
+              - 7day_min
+              - 7day_mean
+              - 7day_max
+            NO2:
+              - current
+              - day_mean
+              - day_max
+              - 3day_mean
+              - 3day_max
+              - 7day_mean
+              - 7day_max
+            PM2.5:
+              - current
+              - day_mean
+              - day_max
+              - 3day_mean
+              - 3day_max
+              - 7day_mean
+              - 7day_max
+            PM10:
+              - current
+              - day_mean
+              - day_max
+              - 3day_mean
+              - 3day_max
+              - 7day_mean
+              - 7day_max
     - label: "Noise_mapping"
       variables: [ "NOISE_DAY", "NOISE_NIGHT" ]
       input:
@@ -113,7 +203,11 @@ environment:
             "PM2.5": "pm2p5_conc"
             "NO2": "no2_conc"
             "O3": "o3_conc"
-          statistics: {}
+          statistics:
+            NOISE_DAY:
+              - current
+            NOISE_NIGHT:
+              - current
     - label: "ERA5_land"
       variables: [ "U_10m", "V_10m", "Td_2m", "T_2m" ]
       input:

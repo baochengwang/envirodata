@@ -200,7 +200,7 @@ class Getter(BaseGetter):
         longitude: float,
         latitude: float,
         variable: str,
-    ) -> float:
+    ) -> tuple[datetime.datetime, float]:
         """Get value for variable out of cached NetCDF4 file
 
         :param date: Date to retrieve
@@ -223,7 +223,7 @@ class Getter(BaseGetter):
             nc = netCDF4.Dataset(output_fname)  # pylint: disable=no-member
         except OSError:
             logger.info("No data found for {:s}!".format(date.strftime("%Y-%m-%d")))
-            return np.nan
+            return date, np.nan
 
         def _get_index(lons, lats, lon, lat):
             ddelta = (lons - lon) ** 2 + (lats - lat) ** 2
@@ -257,9 +257,9 @@ class Getter(BaseGetter):
 
         try:
             if len(nc.dimensions) == 3:
-                return float(nc.variables[fvarname][tidx, yidx, xidx])
+                return date, float(nc.variables[fvarname][tidx, yidx, xidx])
             elif len(nc.dimensions) == 4:
-                return float(nc.variables[fvarname][tidx, 0, yidx, xidx])
+                return date, float(nc.variables[fvarname][tidx, 0, yidx, xidx])
             else:
                 raise RuntimeError("Unknown number of dimensions in NetCDF file.")
         except Exception as exc:

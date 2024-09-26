@@ -3,13 +3,20 @@
 import logging
 import datetime
 from typing import Callable
-from dataclasses import dataclass
 import copy
 import numpy as np
+import timezonefinder
+from pytz import timezone, utc
+from pytz.exceptions import UnknownTimeZoneError
 
 import abc
 
+from envirodata.utils.statistics import Statistic, AvailableStatistics
+
 logger = logging.getLogger(__name__)
+
+
+TF = timezonefinder.TimezoneFinder()
 
 
 class BaseLoader(metaclass=abc.ABCMeta):
@@ -31,93 +38,6 @@ class BaseLoader(metaclass=abc.ABCMeta):
         :type end_date: datetime.datetime
         """
         raise NotImplementedError
-
-
-@dataclass
-class Statistic:
-    """Parameters of a statistic to be calculated for a given variable.
-
-    :param name: (Arbitrary) name of this statistic, used in config.
-    :type name: str
-    :param begin: Start of the statistics period (e.g., yesterday)
-    :type begin: datetime.timedelta
-    :param end: End time of the statistics period (e.g., today)
-    :type end: datetime.timedelta
-    :param function: Function to apply over the retrieved data (e.g., np.nanmean)
-    :type function: Callable
-    :param aggregate: Method to base the date of the statistics period on (e.g., daily,
-    weekly)
-    :type aggregate: str
-    """
-
-    name: str
-    begin: datetime.timedelta
-    end: datetime.timedelta
-    function: Callable
-    aggregate: str = "None"
-
-
-AvailableStatistics = [
-    Statistic(
-        "day_mean",
-        datetime.timedelta(days=0),
-        datetime.timedelta(days=1),
-        np.nanmean,
-        "daily",
-    ),
-    Statistic(
-        "day_minimum",
-        datetime.timedelta(days=0),
-        datetime.timedelta(days=1),
-        np.nanmin,
-        "daily",
-    ),
-    Statistic(
-        "day_maximum",
-        datetime.timedelta(days=0),
-        datetime.timedelta(days=1),
-        np.nanmax,
-        "daily",
-    ),
-    Statistic(
-        "day_sum",
-        datetime.timedelta(days=0),
-        datetime.timedelta(days=1),
-        np.nansum,
-        "daily",
-    ),
-    Statistic(
-        "week_mean",
-        datetime.timedelta(days=0),
-        datetime.timedelta(days=7),
-        np.nanmean,
-        "weekly",
-    ),
-    Statistic(
-        "7day_mean",
-        datetime.timedelta(days=-7),
-        datetime.timedelta(days=0),
-        np.nanmean,
-    ),
-    Statistic(
-        "7day_sum",
-        datetime.timedelta(days=-7),
-        datetime.timedelta(days=0),
-        np.nansum,
-    ),
-    Statistic(
-        "30day_mean",
-        datetime.timedelta(days=-30),
-        datetime.timedelta(days=0),
-        np.nanmean,
-    ),
-    Statistic(
-        "30day_sum",
-        datetime.timedelta(days=-30),
-        datetime.timedelta(days=0),
-        np.nansum,
-    ),
-]
 
 
 class BaseGetter(metaclass=abc.ABCMeta):
@@ -154,7 +74,7 @@ class BaseGetter(metaclass=abc.ABCMeta):
         longitude: float,
         latitude: float,
         variable: str,
-    ) -> float:
+    ) -> tuple[datetime.datetime, float]:
         """Get value for variable out of the (cached) input dataset
         for a given place in time and space (internal)
 
@@ -178,7 +98,7 @@ class BaseGetter(metaclass=abc.ABCMeta):
         longitude: float,
         latitude: float,
         variable: str,
-    ):
+    ) -> tuple[list[datetime.datetime], list[float]]:
         """Get value for variable out of the (cached) input dataset
         for a given period in time and space (internal)
 
@@ -196,13 +116,18 @@ class BaseGetter(metaclass=abc.ABCMeta):
         :rtype: float
         """
         values: list[float] = []
+        times: list[datetime.datetime] = []
         current_date = start_date
 
         while current_date < end_date:
-            values.append(self._get(current_date, longitude, latitude, variable))
+            new_times, new_values = self._get(
+                current_date, longitude, latitude, variable
+            )
+            values.append(new_values)
+            times.append(new_times)
             current_date += self.time_resolution
 
-        return values
+        return times, values
 
     def _get_statistics_for_variable(self, variable: str) -> list[Statistic]:
         """Get statistics object for a given variable.
@@ -215,20 +140,27 @@ class BaseGetter(metaclass=abc.ABCMeta):
         stats_to_be_calculated = []
         if variable in self.variable_statistics:
             for stat in self.variable_statistics[variable]:
+                found = False
                 for available_stat in AvailableStatistics:
                     if available_stat.name == stat:
                         stats_to_be_calculated.append(available_stat)
+                        found = True
+                        break
+                if not found:
+                    logger.critical(
+                        "Unknown statistic %s requested for %s.", stat, variable
+                    )
 
         return stats_to_be_calculated
 
     def _calc_statistic(
         self,
-        start_date: datetime.datetime,
-        end_date: datetime.datetime,
+        date: datetime.datetime,
         longitude: float,
         latitude: float,
         variable: str,
-        aggregation_function: Callable,
+        statistic: Statistic,
+        tz=utc,
     ) -> float:
         """Calculate a statistic for a given variable at a given place over a given
         time period
@@ -249,12 +181,57 @@ class BaseGetter(metaclass=abc.ABCMeta):
         :rtype: float
         """
 
-        values = self._get_range(start_date, end_date, longitude, latitude, variable)
+        # our input has to be in UTC
+        assert date.tzinfo is not None
+        assert date.tzinfo == utc
+
+        # UTC bounds
+        start_date = date + statistic.begin
+        end_date = date + statistic.end
+
+        # in case we request "daily" statistics:
+        # "Daily" refers to 0 - 23:59 LT.
+        # Hence, rebase start_date and end_date (UTC) to
+        # 00:00 LT of the day of start_date and end_date, respectively.
+        if statistic.daily:
+            start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_date -= tz.utcoffset(start_date.replace(tzinfo=None))
+
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+            end_date -= tz.utcoffset(end_date.replace(tzinfo=None))
+
+        # times are in UTC
+        times, values = self._get_range(
+            start_date, end_date, longitude, latitude, variable
+        )
 
         if not any([np.isfinite(x) for x in values]):
             return np.nan
 
-        result = aggregation_function(values)
+        assert times[0].tzinfo is not None
+        assert (times[0].tzinfo == utc) or (times[0].tzinfo == datetime.timezone.utc)
+
+        # localize times to tz of location and make naive,
+        # statistics will be calculated in LT - is easier.
+        times_local = [t.astimezone(tz).replace(tzinfo=None) for t in times]
+
+        result = statistic.function(times_local, values)
+
+        logger.debug(
+            statistic.name,
+            len(times_local),
+            len(values),
+            np.nanmin(values),
+            np.nanmean(values),
+            np.nanmax(values),
+        )
+        logger.debug(values)
+
+        logger.debug(" > ")
+
+        logger.debug(result)
+
+        logger.debug("-----")
 
         return result
 
@@ -281,32 +258,23 @@ class BaseGetter(metaclass=abc.ABCMeta):
         """
         result = {}
 
-        result["actual"] = self._get(date, longitude, latitude, variable)
+        # find time zone for location
+        tzname = TF.timezone_at(lng=longitude, lat=latitude)
+        if tzname is None:
+            raise UnknownTimeZoneError
+        try:
+            tz = timezone(tzname)
+        except UnknownTimeZoneError as exc:
+            raise UnknownTimeZoneError from exc
 
         for statistic in self._get_statistics_for_variable(variable):
-            # is the beginning of the statistics period
-            valid_date = copy.copy(date)
-
-            if statistic.aggregate == "daily":
-                # start with 00:00 of the day requested
-                valid_date = valid_date.replace(hour=0, minute=0, second=0)
-
-            if statistic.aggregate == "weekly":
-                # start with Monday, 00:00 of the week requested
-                valid_date = valid_date.replace(hour=0, minute=0, second=0)
-                while valid_date.weekday() != 0:
-                    valid_date -= datetime.timedelta(days=1)
-
-            start_date = valid_date + statistic.begin
-            end_date = valid_date + statistic.end
-
             result[statistic.name] = self._calc_statistic(
-                start_date,
-                end_date,
+                date,
                 longitude,
                 latitude,
                 variable,
-                statistic.function,
+                statistic,
+                tz=tz,
             )
 
         return result
