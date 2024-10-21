@@ -6,12 +6,14 @@ import datetime
 
 from envirodata.environment import Environment
 
-from envirodata.utils.general import get_config
+from envirodata.utils.general import get_cli_arguments, get_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-config = get_config("config.yaml")
+args = get_cli_arguments()
+
+config = get_config(args.config_file)
 
 environment = Environment(config["environment"])
 

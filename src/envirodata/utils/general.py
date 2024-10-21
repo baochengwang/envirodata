@@ -4,8 +4,30 @@ from typing import Callable
 
 import os
 import importlib
+import subprocess
+import os
+from argparse import ArgumentParser
 
 import confuse  # type: ignore
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def get_cli_arguments():
+    def valid_file_path(fp: str):
+        if not os.path.exists(fp):
+            raise IOError(f"Config file does not exist at {fp}")
+
+        return fp
+
+    parser = ArgumentParser("EnviroData")
+    parser.add_argument("config_file", type=valid_file_path)
+
+    args = parser.parse_args()
+
+    return args
 
 
 def get_config(config_fpath: str) -> confuse.Configuration:
@@ -71,3 +93,18 @@ def load_callable(modulename: str, objname: str) -> Callable:
         raise IOError(f"Object {objname} from {modulename} is not callable.")
 
     return obj
+
+
+def get_git_commit_hash():
+    """Retrieve the current git commit hash for the project.
+
+    :return: git commit hash or "unknown"
+    :rtype: str
+    """
+    try:
+        full_hash = subprocess.check_output(["git", "rev-parse", "HEAD"])
+        full_hash = str(full_hash, "utf-8").strip()
+        return full_hash
+    except subprocess.CalledProcessError as exc:
+        logger.critical("Could not determine git commit hash: %s", str(exc))
+        return "unknown"

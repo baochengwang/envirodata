@@ -88,15 +88,14 @@ class Getter(BaseGetter):
             "tz": "Etc/UTC",
             "units": "si",
         }
-
         try:
             response = requests.get(self.api_url, params=params, timeout=10)
             response.raise_for_status()
         except requests.exceptions.RequestException as exc:
             logger.critical(
                 "Could not get data for %s - %s: %s (%s)",
-                start_date.isoformat,
-                end_date.isoformat,
+                start_date.isoformat(),
+                end_date.isoformat(),
                 response.reason,
                 str(response.status_code),
             )
@@ -178,7 +177,6 @@ class Getter(BaseGetter):
         :return: Value for variable at given point in time and space.
         :rtype: float
         """
-
         times, data = self._get_range(date, date, longitude, latitude, variable)
 
         if len(data) > 0:

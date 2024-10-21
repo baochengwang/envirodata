@@ -151,4 +151,5 @@ class Getter(BaseGetter):
         else:
             logger.debug("Valid sampling for %s!", variable)
             value = float(self.data[variable][1][row, col])
+
         return date, value

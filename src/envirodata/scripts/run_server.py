@@ -1,25 +1,33 @@
-"""Run envirodata REST-API server to geocode addressses and deliver environmental factors."""
+"""Run envirodata REST-API server to geocode addresses
+and deliver environmental factors."""
 
 import sys
 import logging
 import datetime
+from importlib.metadata import version
+from typing import Any
+from io import BytesIO
 import pytz
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, UploadFile
 from fastapi.responses import ORJSONResponse as JSONResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
+
+import pandas as pd
 
 from envirodata.geocoder import Geocoder
 from envirodata.environment import Environment
 
-from envirodata.utils.general import get_config
+from envirodata.utils.general import get_cli_arguments, get_config, get_git_commit_hash
 
 logger = logging.getLogger(__name__)
 
+args = get_cli_arguments()
+
+config = get_config(args.config_file)
+
 app = FastAPI()
-
-
-config = get_config("config.yaml")
 
 geocoder = Geocoder(**config["geocoder"])
 environment = Environment(config["environment"])
@@ -36,12 +44,79 @@ if end_date.tzinfo is None:
 def main() -> None:
     """Envirodata REST-API."""
 
+    def _get_metadata(date: datetime.datetime) -> dict[str, Any]:
+        """Create basic metadata for response.
+
+        :param date: date requested
+        :type date: datetime.datetime
+        :return: basic metadata (package version, git commit, creation date)
+        :rtype: dict[str, Any]
+        """
+        metadata = {
+            "package_version": version("envirodata"),
+            "git_commit_hash": get_git_commit_hash(),
+            "creation_date": datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ).isoformat(),
+        }
+
+        metadata["requested_date_utc"] = date.isoformat()
+
+        return metadata
+
+    def _retrieve(
+        date: datetime.datetime,
+        address: str,
+    ) -> dict[str, Any]:
+        """Retrieve environmental factors for a given date and address. (internal)
+
+        :param date: date requested
+        :type date: datetime.datetime
+        :param address: address requested
+        :type address: str
+        :raises HTTPException: address could not be geocoded
+        :return: exposure estimate
+        :rtype: dict[str, Any]
+        """
+        metadata = _get_metadata(date)
+
+        # (1) geocode address
+        try:
+            longitude, latitude = geocoder.geocode(address)
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Geocoding address failed: {str(exc)}",
+            ) from exc
+
+        geocoding = {
+            "address": address,
+            "location": {"longitude": longitude, "latitude": latitude},
+        }
+
+        # (2) get environmental factors
+        env = environment.get(date, longitude, latitude)
+
+        result = {"metadata": metadata, "geocoding": geocoding, "environment": env}
+
+        return result
+
     @app.get("/")
     def retrieve(
         date: datetime.datetime,
         address: str,
-    ):
-        """Retrieve environmental factors for a given date and address."""
+    ) -> JSONResponse:
+        """Retrieve environmental factors for a given date and address.
+
+        :param date: date requested
+        :type date: datetime.datetime
+        :param address: address requested
+        :type address: str
+        :raises HTTPException: date not within cached range
+        :return: exposure estimate
+        :rtype: JSONResponse
+        """
+
         if date.tzinfo is None:
             logger.critical("Requested date not timezone-aware, assuming UTC!")
             date = date.replace(tzinfo=pytz.UTC)
@@ -53,19 +128,9 @@ def main() -> None:
                 detail=f"Requested date out of cached range ({start_date} - {end_date})",
             )
 
-        # (1) geocode address
-        try:
-            longitude, latitude = geocoder.geocode(address)
-        except RuntimeError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Geocoding address failed: {str(exc)}",
-            ) from exc
+        result = _retrieve(date, address)
 
-        # (2) get environmental factors
-        env = environment.get(date, longitude, latitude)
-
-        return JSONResponse(env)
+        return JSONResponse(result)
 
     @app.get("/by_elements")
     def retrieve_by_elements(
@@ -75,13 +140,83 @@ def main() -> None:
         streetname: str,
         house_number: str = "",
         extension: str = "",
-    ):
+    ) -> JSONResponse:
         """Retrieve environmental factors for a given date and address (as individual
-        elements)."""
+        elements).
+
+        :param date: date requested
+        :type date: datetime.datetime
+        :param postcode: post code
+        :type postcode: str
+        :param city: city
+        :type city: str
+        :param streetname: street name
+        :type streetname: str
+        :param house_number: house number, defaults to ""
+        :type house_number: str, optional
+        :param extension: address extension, defaults to ""
+        :type extension: str, optional
+        :return: exposure estimate
+        :rtype: JSONResponse
+        """
         address = geocoder.standardize_address(
             postcode, city, streetname, house_number, extension
         )
         return retrieve(date, address)
+
+    @app.get("/excel")
+    async def excel() -> HTMLResponse:
+        content = """
+<body>
+<form action="/upload_excel/" enctype="multipart/form-data" method="post">
+<input name="file" type="file">
+<input type="submit">
+</form>
+</body>
+                """
+
+        return HTMLResponse(content=content)
+
+    @app.post("/upload_excel/")
+    async def create_upload_file(file: UploadFile) -> StreamingResponse:
+
+        contents = file.file.read()
+        data = BytesIO(contents)
+        df = pd.read_excel(data)
+
+        result = {}
+
+        i = 0
+        for idx, row in df.iterrows():
+            logger.info("Working on row %d of %d", i, len(df))
+            try:
+                date = row["date"].tz_localize(pytz.utc)
+                result[row["id"]] = _retrieve(date, row["address"])
+            except Exception as exc:
+                result[row["id"]] = {"failed": str(exc)}
+            i += 1
+
+        flat = pd.DataFrame()
+        for id, envrow in result.items():
+            try:
+                env = envrow["environment"]
+                env.update({"id": id})
+
+                env_pd = pd.json_normalize(env)
+            except KeyError:  # if getting env failed previously, make an empty row
+                env_pd = pd.DataFrame.from_dict({0: {"id": id}}, orient="index")
+
+            flat = pd.concat([flat, env_pd])
+
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer) as writer:
+            flat.to_excel(writer, index=False)
+
+        return StreamingResponse(
+            BytesIO(buffer.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=environment.xlsx"},
+        )
 
     uvicorn.run("envirodata.scripts.run_server:app")
 
