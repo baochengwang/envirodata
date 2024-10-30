@@ -111,7 +111,7 @@ class Loader(BaseLoader):
         # empty ones are assumed to have data for whole period?!
         #        metadata["Operational Activity Begin"] =
         # metadata["Operational Activity Begin"].fillna(
-        #            datetime.datetime(1901, 1, 1, tzinfo=datetime.UTC)
+        #            datetime.datetime(1901, 1, 1, tzinfo=datetime.timezone.utc)
         #        )
 
         self.metadata["Operational Activity End"] = pd.to_datetime(
@@ -120,7 +120,7 @@ class Loader(BaseLoader):
         # empty ones end next year
         #        metadata["Operational Activity End"] =
         # metadata["Operational Activity End"].fillna(
-        #            datetime.datetime.now(tz=datetime.UTC) +
+        #            datetime.datetime.now(tz=datetime.timezone.utc) +
         # datetime.timedelta(days=365)
         #        )
 

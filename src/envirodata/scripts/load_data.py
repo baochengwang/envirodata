@@ -18,10 +18,10 @@ config = get_config(args.config_file)
 environment = Environment(config["environment"])
 
 start_date = datetime.datetime.fromisoformat(config["period"]["start_date"]).astimezone(
-    datetime.UTC
+    datetime.timezone.utc
 )
 end_date = datetime.datetime.fromisoformat(config["period"]["end_date"]).astimezone(
-    datetime.UTC
+    datetime.timezone.utc
 )
 
 
