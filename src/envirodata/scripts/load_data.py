@@ -27,7 +27,7 @@ end_date = datetime.datetime.fromisoformat(config["period"]["end_date"]).astimez
 
 def main() -> bool:
     """Load (cache) all environmental factor data for a given date range."""
-    environment.load(start_date, end_date)
+    environment.load(start_date, end_date, servicenames=args.services)
     return True
 
 

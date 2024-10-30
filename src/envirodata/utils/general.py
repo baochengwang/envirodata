@@ -21,8 +21,15 @@ def get_cli_arguments():
 
         return fp
 
+    def valid_list(input_string):
+        try:
+            return input_string.split(",")
+        except ValueError as exc:
+            raise ValueError(f"Not a valid list of services: {input_string}") from exc
+
     parser = ArgumentParser("EnviroData")
     parser.add_argument("config_file", type=valid_file_path)
+    parser.add_argument("--services", type=valid_list, default=None)
 
     args = parser.parse_args()
 

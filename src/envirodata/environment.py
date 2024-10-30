@@ -33,7 +33,12 @@ class Environment:
             self.services[service_config["label"]] = Service(service_config)
         # self.services["DWD"] = Service(config[0])
 
-    def load(self, start_date: datetime.datetime, end_date: datetime.datetime) -> None:
+    def load(
+        self,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
+        servicenames=None,
+    ) -> None:
         """Load (download, cache) all environmental factor data between start date
         and end date.
 
@@ -42,9 +47,13 @@ class Environment:
         :param end_date: Last date to load
         :type end_date: datetime.datetime
         """
+        if servicenames is None:
+            servicenames = list(self.services.keys())
+
         for servicename, service in self.services.items():
-            logger.info("Loading data for service %s", servicename)
-            service.load(start_date, end_date)
+            if servicename in servicenames:
+                logger.info("Loading data for service %s", servicename)
+                service.load(start_date, end_date)
 
     def get(
         self,
