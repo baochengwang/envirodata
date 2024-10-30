@@ -5,6 +5,8 @@ import os
 import datetime
 from collections import OrderedDict
 import shutil
+from urllib.parse import urlparse
+import requests
 
 import numpy as np
 import rasterio
@@ -50,14 +52,30 @@ class Loader(BaseLoader):
         :param end_date: Last date to load
         :type end_date: datetime.datetime
         """
-        for variable, input_path in self.data_table.items():
+        for variable, input_path_str in self.data_table.items():
             output_path = os.path.join(self.cache_path, variable + ".tif")
-            if os.path.exists(input_path):
-                shutil.copy(input_path, output_path)
-            else:
-                logger.critical(
-                    f"Input path {input_path} for variable {variable} does not exist."
-                )
+
+            input_path = urlparse(input_path_str)
+
+            if input_path.scheme in ("file", ""):
+                if os.path.exists(input_path_str):
+                    shutil.copy(input_path_str, output_path)
+                else:
+                    logger.critical(
+                        "Input path %s for variable %s does not " "exist.",
+                        input_path_str,
+                        variable,
+                    )
+            elif input_path.scheme in ("http", "https"):
+                try:
+                    r = requests.get(input_path_str, allow_redirects=True, timeout=120)
+                    open(output_path, "wb").write(r.content)
+                except Exception:
+                    logger.critical(
+                        "Input URL %s for variable %s could not " "be downloaded.",
+                        input_path_str,
+                        variable,
+                    )
 
 
 class Getter(BaseGetter):

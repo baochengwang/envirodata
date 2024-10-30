@@ -177,8 +177,10 @@ environment:
         module: "envirodata.services.geotiff"
         config:
           data_table:
-            "NOISE_DAY": "/Users/knotechr/Projects/mams/data/environment/noise/NOISE_DAY.tif"
-            "NOISE_NIGHT": "/Users/knotechr/Projects/mams/data/environment/noise/NOISE_NIGHT.tif"
+            #"NOISE_DAY": "/Users/knotechr/Projects/mams/data/environment/noise/NOISE_DAY.tif"
+            "NOISE_DAY": "https://megastore.rz.uni-augsburg.de/get/KivxMoRMeC/"
+            #"NOISE_NIGHT": "/Users/knotechr/Projects/mams/data/environment/noise/NOISE_NIGHT.tif"
+            "NOISE_NIGHT": "https://megastore.rz.uni-augsburg.de/get/PqxfqgZVk8/"
           cache_path: &NOISE_CACHE_PATH "cache/noise/"
       output:
         module: "envirodata.services.geotiff"
