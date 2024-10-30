@@ -5,7 +5,6 @@ from typing import Callable
 import os
 import importlib
 import subprocess
-import os
 from argparse import ArgumentParser
 
 import confuse  # type: ignore

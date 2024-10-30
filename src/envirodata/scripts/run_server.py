@@ -27,7 +27,7 @@ args = get_cli_arguments()
 
 config = get_config(args.config_file)
 
-app = FastAPI()
+app = FastAPI(**config["fastapi"])
 
 geocoder = Geocoder(**config["geocoder"])
 environment = Environment(config["environment"])
@@ -218,7 +218,10 @@ def main() -> None:
             headers={"Content-Disposition": "attachment; filename=environment.xlsx"},
         )
 
-    uvicorn.run("envirodata.scripts.run_server:app")
+    uvicorn_config = uvicorn.Config(app, **config["uvicorn"])
+    uvicorn_server = uvicorn.Server(uvicorn_config)
+    uvicorn_server.run()
+    # uvicorn.run("envirodata.scripts.run_server:app")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,25 @@
 period:
-  start_date: "2024-01-01T00:00:00"
-  end_date: "2024-02-01T00:00:00"
+  start_date: "2010-01-01T00:00:00"
+  end_date: "2024-10-01T00:00:00"
+
+fastapi:
+  debug: True,
+  title: "EnviroData API"
+  version: "2.0.1"
+  description: "This is the OpenAPI documentation for the current development of the EnviroData project by the Chair of Model-Based Environmental Exposure Science"
+  contact:
+      name": "MBEES EnviroData API"
+      url": "https://mbees.med.uni-augsburg.de/"
+  license_info:
+      name: "License"
+      url: "https://www.gnu.org/licenses/gpl-3.0.en.html"
+  openapi_url: "/openapi.json"
+  swagger_ui_parameters: {"syntaxHighlight.theme": "obsidian"}
+
+uvicorn:
+  host: 0.0.0.0
+  port: 8000
+  log_level: trace
 
 geocoder:
   url: "http://localhost:8080/search.php"

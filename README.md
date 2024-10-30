@@ -7,11 +7,22 @@ It provides a Python package called `envirodata`.
 ## Development setup
 
  1) Install [docker](https://www.docker.com).
- 2) Install [poetry](http://poetry.eustace.io).
- 3) Clone repo into folder called `WORKPATH` from here on.
- 4) Setup and start dockerized Nomatim geocoder (`tools/setup_nomatim_docker.bash`) 
- 5) Create poetry environment and install packages
-    1) go to `WORKPATH`
+ 2) Install [python](https://www.python.org) > 3.9.
+ 3) Install [poetry](http://poetry.eustace.io).
+ 4) Clone envirodata repo (need username or deploy token - contact us):
+   
+    `git clone https://git.rz.uni-augsburg.de/mmbees-git/envirodata.git`
+
+ 5) Setup and start dockerized Nomatim geocoder (might need to `sudo` this...):
+   
+   `bash envirodata/tools/setup_nomatim_docker.bash`
+
+ 6) Setup and start BrightSky DWD data provider (might need to `sudo` this...):
+ 
+   `bash envirodata/tools/setup_brightsky_api.bash`
+   
+ 7) Create poetry environment and install packages
+    1) go to the directory you cloned envirodata into
     2) run `poetry install`
 
 ## Configuration
@@ -46,11 +57,11 @@ Get model data fields from Copernicus (model results) [Atmosphere Data Store](ht
 
 Model data is cached as NetCDF files.
 
-### Wetterdienst
+### DWD
 
-Get station observations from DWD using the [wetterdienst](https://wetterdienst.readthedocs.io/en/latest/) package.
+Get station observations from DWD using [BrightSky](https://brightsky.dev).
 
-Station data is cached into a local (sqlite3 file-) database.
+Station data is provided through BrightSky running and caching in a local Docker container.
 
 ### GeoTIFF
 
