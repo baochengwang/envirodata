@@ -150,6 +150,9 @@ class Loader(BaseLoader):
         apiUrl = "https://eeadmz1-downloads-api-appservice.azurewebsites.net/"
         endpoint = "ParquetFile/urls"
 
+        nDatasets = len(DATASETS)
+        iDataset = 1
+
         # Request body
         for dataset in DATASETS:
             logger.info(f"Dataset {dataset['name']} ({dataset['dbindex']})")
@@ -197,7 +200,9 @@ class Loader(BaseLoader):
                     with open(fpath, "wb") as f:
                         f.write(dataReq.content)
                 i += 1
-                logger.info(f"Cached file {i}/{N}")
+                logger.info(f"Cached file {i}/{N} (dataset {iDataset}/{nDatasets})")
+
+            iDataset += 1
 
         # save metadata
         self.metadata.to_parquet(self.metadata_path)
