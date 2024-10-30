@@ -2,52 +2,73 @@
 
 Provide geocoded environmental factor attribution for health care applications.
 
-It provides a Python package called `envirodata`.
+This repository provides a Python package called `envirodata`, as well as a Docker container.
+
+The application is split into 2 parts:
+
+ 1) Preparation and downloading of environmental data
+
+Environmental data is downloaded and cached locally. This requires internet access. Needs to be done upon inital installation, 
+and potentially repeated to cache new data.
+
+ 2) Run local envirodata service
+
+Environmental factor attribution can be requested through a REST-API. No internet access needed, all actions are local and conform
+with data protection. This is the default mode to run envirodata.
 
 ## Development setup
 
  1) Install [docker](https://www.docker.com).
- 2) Install [python](https://www.python.org) > 3.9.
- 3) Install [poetry](http://poetry.eustace.io).
- 4) Clone envirodata repo (need username or deploy token - contact us):
+
+ 2) Clone envirodata repo (need username or deploy token - contact us):
    
     `git clone https://git.rz.uni-augsburg.de/mmbees-git/envirodata.git`
 
- 5) Setup and start dockerized Nomatim geocoder (might need to `sudo` this...):
-   
-   `bash envirodata/tools/setup_nomatim_docker.bash`
+ 3) Go to the directory where you cloned the repository in.
 
- 6) Setup and start BrightSky DWD data provider (might need to `sudo` this...):
- 
-   `bash envirodata/tools/setup_brightsky_api.bash`
+    `cd envirodata`
+
+ 4) Setup and start dockerized Nomatim geocoder (might need to `sudo` this...):
    
- 7) Create poetry environment and install packages
-    1) go to the directory you cloned envirodata into
-    2) run `poetry install`
+   `bash tools/setup_nomatim_docker.bash`
+
+ 5) Setup and start BrightSky DWD data provider (might need to `sudo` this...):
+ 
+   `bash tools/setup_brightsky_api.bash`
+
+ 6) Build envirodata docker container (might need to `sudo` this...):
+ 
+   `bash tools/build_envirodata_docker.bash`
+
+  7) Start an Envirodata container and load data
+
+    `bash tools/run_loader_container.bash`
+
+  8) Run the Envirodata service
+
+    `bash tools/start_server_container.bash`
 
 ## Configuration
 
 `envirodata` is configured through one configuration file, `config.yaml`, in `WORKPATH`.
 
-## Running
+## Setup and running
 
 For development, usage without actually installing the package works through calling `poetry shell` when in `WORKPATH`. This gives you a shell with access to a `python3` that knows about the new package, and also enables command line scripts (e.g., `load_data`, `run_server`) defined in `pyproject.toml`.
 
- 1) Downloading and caching data
+### Preparation and downloading data
 
     Uses the `src/envirodata/Environment.py` class to cache data from all services defined in `config.yaml`.
 
-    Just execute `load_data`.
+    Just execute `load_data` and wait (will be several hours!).
 
- 2) Running the actual server
+## Running
 
     Just execute `run_server`.
 
     Runs a [FastAPI](https://fastapi.tiangolo.com) server,uses `src/envirodata/Geocoder.py` to geocode address requests, and requests environmental parameters from `src/envirodata/Environment.py`.
 
- 3) Test it out
-
-    Once you cached data and run the server, you can test the API by pointing your browser to http://localhost:8000/docs.
+    You can test the API by pointing your browser to http://localhost:8000/docs.
 
 ## Services implemented
 

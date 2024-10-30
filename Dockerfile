@@ -32,4 +32,4 @@ RUN poetry install --no-interaction --no-ansi && rm -rf $POETRY_CACHE_DIR
 
 EXPOSE 8000
 
-ENTRYPOINT ["poetry", "run", "run_server", "config.yaml"]
+ENTRYPOINT ["poetry", "run"]

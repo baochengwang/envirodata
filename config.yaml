@@ -22,7 +22,7 @@ uvicorn:
   log_level: trace
 
 geocoder:
-  url: "http://localhost:8080/search.php"
+  url: "http://nominatim:8080/search.php"
 
 environment:
   domain:
@@ -51,7 +51,7 @@ environment:
       output:
         module: "envirodata.services.dwd"
         config:
-          api_url: "http://localhost:5000/weather"
+          api_url: "http://brightsky-web-1:5000/weather"
           statistics:
             precipitation:
               - day_sum

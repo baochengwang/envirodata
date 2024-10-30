@@ -1,0 +1,1 @@
+docker run --rm --mount source=envirodata_cache,target=/cache mbees/envirodata:latest load_data --services Noise_mapping config.yaml
