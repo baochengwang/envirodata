@@ -8,3 +8,4 @@ sandbox
 .env
 cache/*
 docs/_build/*
+deploy_tokens
