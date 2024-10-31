@@ -2,7 +2,6 @@
 
 import logging
 from collections import OrderedDict
-from typing import Any
 import datetime
 
 import confuse  # type: ignore
@@ -85,7 +84,7 @@ class Environment:
                     latitude,
                     variables=variables,
                 )
-                logger.debug(f"Done with {servicename}")
+                logger.debug("Loaded data for %s", servicename)
             except Exception as exc:
                 logger.critical(
                     "Could not retrieve data for service %s: %s",

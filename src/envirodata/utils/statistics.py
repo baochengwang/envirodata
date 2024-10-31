@@ -40,8 +40,9 @@ def shifted_difference(values: list[float], shift: int) -> list[float]:
     :return: Difference value series
     :rtype: _list[float]
     """
-    old = np.array(values + ([np.nan] * shift))
-    new = np.array(([np.nan] * shift) + values)
+
+    old = np.concatenate((values, np.array([np.nan] * shift)))
+    new = np.concatenate((np.array([np.nan] * shift), values))
 
     delta = old - new
 

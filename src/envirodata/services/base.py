@@ -4,6 +4,7 @@ import abc
 import datetime
 import logging
 from collections import OrderedDict
+import copy
 
 import confuse  # type: ignore
 import numpy as np
@@ -157,9 +158,8 @@ class BaseGetter(metaclass=abc.ABCMeta):
     def _calc_statistic(
         self,
         date: datetime.datetime,
-        longitude: float,
-        latitude: float,
-        variable: str,
+        all_times: np.ndarray[datetime.datetime],
+        all_values: np.ndarray[float],
         statistic: Statistic,
         tz=utc,
     ) -> float:
@@ -186,6 +186,34 @@ class BaseGetter(metaclass=abc.ABCMeta):
         assert date.tzinfo is not None
         assert date.tzinfo == utc
 
+        start_date, end_date = self._get_statistics_time_range(statistic, date, tz)
+
+        valid_idx = np.logical_and(all_times >= start_date, all_times <= end_date)
+
+        times = all_times[valid_idx]
+        values = all_values[valid_idx]
+
+        if not np.any(np.isfinite(values)):
+            return np.nan
+
+        assert times[0].tzinfo is not None
+        assert (times[0].tzinfo == utc) or (times[0].tzinfo == datetime.timezone.utc)
+
+        # localize times to tz of location and make naive,
+        # statistics will be calculated in LT - is easier.
+        times_local = [t.astimezone(tz).replace(tzinfo=None) for t in times]
+
+        logger.debug(statistic.name)
+        result = statistic.function(times_local, values)
+
+        return result
+
+    def _get_statistics_time_range(
+        self,
+        statistic: Statistic,
+        date: datetime.datetime,
+        tz,
+    ) -> tuple[datetime.datetime, datetime.datetime]:
         # UTC bounds
         start_date = date + statistic.begin
         end_date = date + statistic.end
@@ -201,40 +229,7 @@ class BaseGetter(metaclass=abc.ABCMeta):
             end_date = end_date.replace(hour=23, minute=59, second=59)
             end_date -= tz.utcoffset(end_date.replace(tzinfo=None))
 
-        # times are in UTC
-        times, values = self._get_range(
-            start_date, end_date, longitude, latitude, variable
-        )
-
-        if not any([np.isfinite(x) for x in values]):
-            return np.nan
-
-        assert times[0].tzinfo is not None
-        assert (times[0].tzinfo == utc) or (times[0].tzinfo == datetime.timezone.utc)
-
-        # localize times to tz of location and make naive,
-        # statistics will be calculated in LT - is easier.
-        times_local = [t.astimezone(tz).replace(tzinfo=None) for t in times]
-
-        result = statistic.function(times_local, values)
-
-        logger.debug(
-            statistic.name,
-            len(times_local),
-            len(values),
-            np.nanmin(values),
-            np.nanmean(values),
-            np.nanmax(values),
-        )
-        logger.debug(values)
-
-        logger.debug(" > ")
-
-        logger.debug(result)
-
-        logger.debug("-----")
-
-        return result
+        return start_date, end_date
 
     def get(
         self,
@@ -259,6 +254,10 @@ class BaseGetter(metaclass=abc.ABCMeta):
         """
         result = {}
 
+        # our input has to be in UTC
+        assert date.tzinfo is not None
+        assert date.tzinfo == utc
+
         # find time zone for location
         tzname = TF.timezone_at(lng=longitude, lat=latitude)
         if tzname is None:
@@ -268,13 +267,33 @@ class BaseGetter(metaclass=abc.ABCMeta):
         except UnknownTimeZoneError as exc:
             raise UnknownTimeZoneError from exc
 
+        # get max time range needed for statistics
+        start_date = copy.copy(date)
+        end_date = copy.copy(date)
+
+        for statistic in self._get_statistics_for_variable(variable):
+            new_start_date, new_end_date = self._get_statistics_time_range(
+                statistic, date, tz
+            )
+            start_date = min(start_date, new_start_date)
+            end_date = max(end_date, new_end_date)
+
+        # load data
+        _times, _values = self._get_range(
+            start_date, end_date, longitude, latitude, variable
+        )
+
+        times = np.array(_times)
+        values = np.array(_values)
+
+        logger.debug(variable)
+
         # get all statistics (the current value is also a "statistic")
         for statistic in self._get_statistics_for_variable(variable):
             result[statistic.name] = self._calc_statistic(
                 date,
-                longitude,
-                latitude,
-                variable,
+                times,
+                values,
                 statistic,
                 tz=tz,
             )
