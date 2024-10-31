@@ -16,35 +16,35 @@ and potentially repeated to cache new data.
 Environmental factor attribution can be requested through a REST-API. No internet access needed, all actions are local and conform
 with data protection. This is the default mode to run envirodata.
 
-## Development setup
+## Setup
 
- 1) Install [docker](https://www.docker.com).
+ 1) Install [docker](https://www.docker.com), e.g. follow [these instructions](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository) for Ubunutu. On Linux, all `docker` will need to be `sudo'ed` unless you are root.
 
  2) Clone envirodata repo (need username or deploy token - contact us):
-   
+
     `git clone https://git.rz.uni-augsburg.de/mmbees-git/envirodata.git`
 
  3) Go to the directory where you cloned the repository in.
 
     `cd envirodata`
 
- 4) Setup and start dockerized Nomatim geocoder (might need to `sudo` this...):
-   
+ 4) Setup and start dockerized Nomatim geocoder:
+
    `bash tools/setup_nomatim_docker.bash`
 
- 5) Setup and start BrightSky DWD data provider (might need to `sudo` this...):
- 
+ 5) Setup and start BrightSky DWD data provider:
+
    `bash tools/setup_brightsky_api.bash`
 
- 6) Build envirodata docker container (might need to `sudo` this...):
- 
+ 6) Build envirodata docker container:
+
    `bash tools/build_envirodata_docker.bash`
 
-  7) Start an Envirodata container and load data
+ 7) Start an Envirodata container and load data
 
     `bash tools/run_loader_container.bash`
 
-  8) Run the Envirodata service
+ 8) Run the Envirodata service
 
     `bash tools/start_server_container.bash`
 
