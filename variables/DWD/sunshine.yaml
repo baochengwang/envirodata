@@ -1,0 +1,6 @@
+name: sunshine
+long_name: sunshine_duration
+description: "Sunshine duration"
+units: "min"
+statistics:
+  - day_sum

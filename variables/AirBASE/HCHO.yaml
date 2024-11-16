@@ -1,0 +1,6 @@
+name: HCHO
+long_name: formaldehyde
+description: "Formaldehyde concentration in air"
+units: "ppbv"
+statistics:
+  - current

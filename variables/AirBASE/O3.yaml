@@ -1,0 +1,18 @@
+name: O3
+long_name: ozone
+description: "Ozone concentration in air"
+units: "ppbv"
+statistics:
+  - current
+  - mda8
+  - 3day_mean_mda8
+  - 7day_mean_mda8
+  - day_min
+  - day_mean
+  - day_max
+  - 3day_min
+  - 3day_mean
+  - 3day_max
+  - 7day_min
+  - 7day_mean
+  - 7day_max

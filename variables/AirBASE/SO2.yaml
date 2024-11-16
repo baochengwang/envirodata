@@ -1,0 +1,6 @@
+name: SO2
+long_name: sulphur_dioxide
+description: "Sulphur dioxide concentration in air"
+units: "ppbv"
+statistics:
+  - current

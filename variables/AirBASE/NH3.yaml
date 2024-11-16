@@ -1,0 +1,6 @@
+name: NH3
+long_name: ammonia
+description: "Ammonia concentration in air"
+units: "ppbv"
+statistics:
+  - current

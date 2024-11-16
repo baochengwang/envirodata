@@ -1,0 +1,6 @@
+name: NOISE_DAY
+long_name: noise_day
+description: "Maximum predicted ambient noise level during daytime"
+units: "dB"
+statistics:
+  - current

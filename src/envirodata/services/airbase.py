@@ -213,7 +213,6 @@ class Getter(BaseGetter):
         self,
         cache_path: str,
         variable_translation_table: dict,
-        statistics: dict[str, list[str]],
     ):
         """Get values from dataset.
 
@@ -233,17 +232,10 @@ class Getter(BaseGetter):
 
         self.metadata = gp.read_parquet(os.path.join(self.cache_path, METADATA_FNAME))
 
-        self._variable_statistics = statistics
-
     @property
     def time_resolution(self):
         """Time resolution of the dataset."""
         return datetime.timedelta(hours=1)
-
-    @property
-    def variable_statistics(self) -> dict[str, list[str]]:
-        """Statistics to be calculated for a given variable."""
-        return self._variable_statistics
 
     def _get(
         self,

@@ -1,0 +1,6 @@
+name: wind_gust_direction
+long_name: wind_gust_direction
+description: "Direction of wind gusts"
+units: "degrees"
+statistics:
+  - current

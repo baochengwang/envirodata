@@ -1,0 +1,6 @@
+name: precipitation
+long_name: Precipitation
+description: "Amount of precipitation"
+units: "l m-2"
+statistics:
+  - day_sum

@@ -1,0 +1,12 @@
+name: NO2
+long_name: nitrogen_dioxide
+description: "Nitrogen dioxide concentration in air"
+units: "ppbv"
+statistics:
+  - current
+  - day_mean
+  - day_max
+  - 3day_mean
+  - 3day_max
+  - 7day_mean
+  - 7day_max

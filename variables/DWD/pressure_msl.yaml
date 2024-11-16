@@ -1,0 +1,8 @@
+name: pressure_msl
+long_name: pressure_mean_sea_level
+description: "Atmospheric air pressure normalized to mean sea level"
+units: "Pa"
+statistics:
+  - current
+  - 24h_max_3h_delta
+  - 5day_max_3h_delta

@@ -1,0 +1,8 @@
+name: wind_speed
+long_name: wind_speed
+description: "Wind speed"
+units: "m s-1"
+statistics:
+  - current
+  - 3day_mean
+  - 7day_mean

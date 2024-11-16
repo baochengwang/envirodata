@@ -1,0 +1,6 @@
+name: NOISE_NIGHT
+long_name: noise_night
+description: "Maximum predicted ambient noise level at night"
+units: "dB"
+statistics:
+  - current

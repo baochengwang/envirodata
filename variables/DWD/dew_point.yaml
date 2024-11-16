@@ -1,0 +1,6 @@
+name: dew_point
+long_name: dew_point
+description: "Dew point"
+units: "K"
+statistics:
+  - current

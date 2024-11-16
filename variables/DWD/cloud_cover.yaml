@@ -1,0 +1,6 @@
+name: cloud_cover
+long_name: cloud_cover
+description: "Cloud cover"
+units: "fraction"
+statistics:
+  - current

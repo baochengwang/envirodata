@@ -1,0 +1,12 @@
+name: PM2.5
+long_name: particulate_matter_below_2_5_um
+description: "Particulate matter with diameter below 2.5 micrometer mass concentration in air"
+units: "ug m-3"
+statistics:
+  - current
+  - day_mean
+  - day_max
+  - 3day_mean
+  - 3day_max
+  - 7day_mean
+  - 7day_max

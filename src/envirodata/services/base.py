@@ -5,6 +5,11 @@ import datetime
 import logging
 from collections import OrderedDict
 import copy
+import os
+from dataclasses import dataclass, field, fields
+import yaml
+import json
+from typing import Any
 
 import confuse  # type: ignore
 import numpy as np
@@ -19,6 +24,48 @@ logger = logging.getLogger(__name__)
 
 
 TF = timezonefinder.TimezoneFinder()
+
+
+@dataclass
+class Variable:
+    name: str
+    long_name: str
+    description: str
+    units: str
+    statistics: list[Statistic] = field(default_factory=list)
+
+    @property
+    def metadata(self) -> dict[str, Any]:
+        return {f.name: getattr(self, f.name) for f in fields(self)}
+
+    @property
+    def metadata_serialized(self):
+        _items = {}
+        for name, value in self.metadata.items():
+            try:
+                # metadata should be JSON serializable
+                # if it is not - just ignore??
+                _ = json.dumps(value)
+                _items[name] = value
+            except TypeError:
+                pass
+        return _items
+
+    def __post_init__(self) -> None:
+        _statistics = []
+        for s in self.statistics:
+            if not isinstance(s, Statistic):
+                _new_stat = None
+                for available_stat in AvailableStatistics:
+                    if available_stat.name == s:
+                        _new_stat = available_stat
+                if not _new_stat:
+                    raise ValueError("Statistic <{s}> is unknown!")
+                else:
+                    _statistics.append(_new_stat)
+            else:
+                _statistics.append(s)
+        self.statistics = _statistics
 
 
 class BaseLoader(metaclass=abc.ABCMeta):
@@ -53,7 +100,6 @@ class BaseGetter(metaclass=abc.ABCMeta):
         is_valid_subclass &= NotImplemented
 
         is_valid_subclass &= hasattr(subclass, "time_resolution")
-        is_valid_subclass &= hasattr(subclass, "variable_statistics")
 
         return is_valid_subclass
 
@@ -61,12 +107,6 @@ class BaseGetter(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def time_resolution(self) -> datetime.timedelta:
         """Time resolution of the dataset."""
-        raise NotImplementedError
-
-    @property
-    @abc.abstractmethod
-    def variable_statistics(self) -> dict[str, list[str]]:
-        """Statistics to be calculated for a given variable."""
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -130,30 +170,6 @@ class BaseGetter(metaclass=abc.ABCMeta):
             current_date += self.time_resolution
 
         return times, values
-
-    def _get_statistics_for_variable(self, variable: str) -> list[Statistic]:
-        """Get statistics object for a given variable.
-
-        :param variable: Variable to get statistics information
-        :type variable: str
-        :return: List of statistics to calculate
-        :rtype: list[Statistic]
-        """
-        stats_to_be_calculated = []
-        if variable in self.variable_statistics:
-            for stat in self.variable_statistics[variable]:
-                found = False
-                for available_stat in AvailableStatistics:
-                    if available_stat.name == stat:
-                        stats_to_be_calculated.append(available_stat)
-                        found = True
-                        break
-                if not found:
-                    logger.critical(
-                        "Unknown statistic %s requested for %s.", stat, variable
-                    )
-
-        return stats_to_be_calculated
 
     def _calc_statistic(
         self,
@@ -236,7 +252,7 @@ class BaseGetter(metaclass=abc.ABCMeta):
         date: datetime.datetime,
         longitude: float,
         latitude: float,
-        variable: str,
+        variable: Variable,
     ) -> dict:
         """Get value for variable out of the input dataset
         for a given place in time and space
@@ -271,7 +287,7 @@ class BaseGetter(metaclass=abc.ABCMeta):
         start_date = copy.copy(date)
         end_date = copy.copy(date)
 
-        for statistic in self._get_statistics_for_variable(variable):
+        for statistic in variable.statistics:
             new_start_date, new_end_date = self._get_statistics_time_range(
                 statistic, date, tz
             )
@@ -280,7 +296,7 @@ class BaseGetter(metaclass=abc.ABCMeta):
 
         # load data
         _times, _values = self._get_range(
-            start_date, end_date, longitude, latitude, variable
+            start_date, end_date, longitude, latitude, variable.name
         )
 
         times = np.array(_times)
@@ -289,7 +305,7 @@ class BaseGetter(metaclass=abc.ABCMeta):
         logger.debug(variable)
 
         # get all statistics (the current value is also a "statistic")
-        for statistic in self._get_statistics_for_variable(variable):
+        for statistic in variable.statistics:
             result[statistic.name] = self._calc_statistic(
                 date,
                 times,
@@ -313,13 +329,25 @@ class Service:
         information on input and output config.
         :type config: dict | OrderedDict | confuse.Configuration
         """
-        self.variables: list[str] = config["variables"]
+        self.variables: list[Variable] = self._load_variables(config["variables"])
 
         self._loader: None | BaseLoader = None
         self._loader_config = config["input"]
 
         self._getter: None | BaseGetter = None
         self._getter_config = config["output"]
+
+    def _load_variables(self, variable_path) -> list[Variable]:
+        _variables: list[Variable] = []
+        for variable_config_fname in os.listdir(variable_path):
+            variable_config_fpath = os.path.join(variable_path, variable_config_fname)
+            variable_config = yaml.load(
+                open(variable_config_fpath, "rb"), yaml.SafeLoader
+            )
+            _new_variable = Variable(**variable_config)
+            _variables.append(_new_variable)
+
+        return _variables
 
     def load(self, start_date: datetime.datetime, end_date: datetime.datetime) -> None:
         """Load / cache data for this service.
@@ -340,8 +368,7 @@ class Service:
         date: datetime.datetime,
         longitude: float,
         latitude: float,
-        variables: list | None = None,
-    ) -> dict:
+    ) -> dict[str, dict]:
         """Retrieve values for (a subset of) the variables in this dataset at
         a given point in time and space.
 
@@ -351,21 +378,19 @@ class Service:
         :type longitude: float
         :param latitude: Geographical latitude
         :type latitude: float
-        :param variables: List of variables, defaults to all variables known
-        :type variables: list, optional
-        :return: Values of all requested variables
-        :rtype: dict
+        :return: Values of all requested variables, and metadata for each variable
+        :rtype: dict[str, dict]
         """
         if self._getter is None:
             output_class = load_callable(self._getter_config["module"], "Getter")
             self._getter = output_class(**self._getter_config["config"])
 
-        if not variables:
-            variables = self.variables
-
-        variables = [v for v in variables if v in self.variables]
-
         return {
-            variable: self._getter.get(date, longitude, latitude, variable)
-            for variable in variables
+            "values": {
+                variable.name: self._getter.get(date, longitude, latitude, variable)
+                for variable in self.variables
+            },
+            "metadata": {
+                variable.name: variable.metadata for variable in self.variables
+            },
         }

@@ -30,7 +30,6 @@ class Environment:
         for service_config in config:
             logger.info("Registered service %s", service_config["label"])
             self.services[service_config["label"]] = Service(service_config)
-        # self.services["DWD"] = Service(config[0])
 
     def load(
         self,
@@ -59,7 +58,6 @@ class Environment:
         date: datetime.datetime,
         longitude: float,
         latitude: float,
-        variables: list | None = None,
     ) -> dict:
         """Retrieve values for (a subset of) all known variables at
         a given point in time and space.
@@ -70,8 +68,6 @@ class Environment:
         :type longitude: float
         :param latitude: Geographical latitude
         :type latitude: float
-        :param variables: List of variables, defaults to all variables known
-        :type variables: list, optional
         :return: Values of all requested variables
         :rtype: dict
         """
@@ -82,7 +78,6 @@ class Environment:
                     date,
                     longitude,
                     latitude,
-                    variables=variables,
                 )
                 logger.debug("Loaded data for %s", servicename)
             except Exception as exc:

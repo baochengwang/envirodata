@@ -117,7 +117,6 @@ class Getter(BaseGetter):
         cache_fpath_pattern: str,
         time_calculation: str,
         variable_translation_table: dict,
-        statistics: dict[str, list[str]],
     ):
         """Get values from dataset.
 
@@ -144,17 +143,10 @@ class Getter(BaseGetter):
             raise ValueError("Unknown method to compute time.")
         self.calc_time = time_calculators[time_calculation]
 
-        self._variable_statistics = statistics
-
     @property
     def time_resolution(self):
         """Time resolution of the dataset."""
         return datetime.timedelta(hours=1)
-
-    @property
-    def variable_statistics(self) -> dict[str, list[str]]:
-        """Statistics to be calculated for a given variable."""
-        return self._variable_statistics
 
     def _calc_time_since_analysis(
         self, date: datetime.datetime, nc: netCDF4.Dataset  # pylint: disable=no-member

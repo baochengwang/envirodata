@@ -1,0 +1,6 @@
+name: visibility
+long_name: visibility
+description: "Visibility"
+units: "m"
+statistics:
+  - current

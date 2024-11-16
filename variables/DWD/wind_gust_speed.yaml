@@ -1,0 +1,8 @@
+name: wind_gust_speed
+long_name: wind_gust_speed
+description: "Wind speed of gusts"
+units: "m s-1"
+statistics:
+  - current
+  - 3day_mean
+  - 7day_mean

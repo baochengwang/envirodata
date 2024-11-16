@@ -1,0 +1,15 @@
+name: temperature
+long_name: temperature
+description: "Air temperature at 2 m"
+units: "K"
+statistics:
+  - current
+  - 24h_amplitude
+  - 3day_mean_day_max
+  - 3day_max_day_max
+  - 3day_mean_day_min
+  - 3day_min_day_min
+  - 7day_mean_day_max
+  - 7day_max_day_max
+  - 7day_mean_day_min
+  - 7day_min_day_min

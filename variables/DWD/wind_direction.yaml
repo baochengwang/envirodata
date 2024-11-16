@@ -1,0 +1,6 @@
+name: wind_direction
+long_name: wind_direction
+description: "Wind direction"
+units: "degrees"
+statistics:
+  - current

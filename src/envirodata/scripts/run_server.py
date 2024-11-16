@@ -11,6 +11,7 @@ import pytz
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, status, UploadFile
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse as JSONResponse
 from fastapi.responses import HTMLResponse, StreamingResponse
 
@@ -130,7 +131,10 @@ def main() -> None:
 
         result = _retrieve(date, address)
 
-        return JSONResponse(result)
+        # serializes also datetimes, ...
+        json_result = jsonable_encoder(result)
+
+        return JSONResponse(json_result)
 
     @app.get("/by_elements")
     def retrieve_by_elements(
@@ -221,7 +225,6 @@ def main() -> None:
     uvicorn_config = uvicorn.Config(app, **config["uvicorn"])
     uvicorn_server = uvicorn.Server(uvicorn_config)
     uvicorn_server.run()
-    # uvicorn.run("envirodata.scripts.run_server:app")
 
 
 if __name__ == "__main__":

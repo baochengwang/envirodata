@@ -39,24 +39,18 @@ class Loader(BaseLoader):
 class Getter(BaseGetter):
     """Get values from dataset."""
 
-    def __init__(self, api_url: str, statistics: dict[str, list[str]]) -> None:
+    def __init__(self, api_url: str) -> None:
         """_summary_
 
         :param api_url: BrightSky weather API endpoint URI
         :type api_url: str
         """
         self.api_url = api_url
-        self._variable_statistics = statistics
 
     @property
     def time_resolution(self):
         """Time resolution of the dataset."""
         return datetime.timedelta(hours=1)
-
-    @property
-    def variable_statistics(self) -> dict[str, list[str]]:
-        """Statistics to be calculated for a given variable."""
-        return self._variable_statistics
 
     def _load_json_from_api(
         self,
