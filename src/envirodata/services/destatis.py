@@ -17,6 +17,7 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import make_url
 import pandas as pd
+import random
 
 import numpy as np
 
@@ -57,8 +58,6 @@ class Loader(BaseLoader):
         self.db_url = db_url
         self.grid_id_field = grid_id_field
 
-        self.table_name = os.path.basename(csv_path).replace(".csv", "")
-
         logger.debug("Memory DB located at %s", db_url)
 
         url = make_url(db_url)
@@ -83,7 +82,9 @@ class Loader(BaseLoader):
         :type end_date: datetime.datetime
         """
 
-        tmp_path = os.path.join(self.cache_path, os.path.basename(self.csv_path))
+        tmp_path = os.path.join(
+            self.cache_path, str(random.randint(10, 1000000)) + ".csv"
+        )
         copy_or_download(
             self.csv_path,
             tmp_path,
