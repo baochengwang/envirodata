@@ -26,6 +26,7 @@ RUN poetry config --list
 COPY pyproject.toml ./
 COPY src ./src
 COPY config.yaml ./config.yaml
+COPY variables ./variables
 RUN touch README.md
 
 RUN poetry install --no-interaction --no-ansi && rm -rf $POETRY_CACHE_DIR
