@@ -96,7 +96,7 @@ environment:
         module: "envirodata.services.destatis"
         config:
           #csv_path: "/Users/knotechr/Downloads/Zensus2022_Durchschn_Nettokaltmiete/Zensus2022_Durchschn_Nettokaltmiete_100m-Gitter.csv"
-          csv_path: "https://megastore.rz.uni-augsburg.de/get/hAy4HJhGfQ/""
+          csv_path: "https://megastore.rz.uni-augsburg.de/get/hAy4HJhGfQ/"
           db_url: &NETTOMIETE_DB_URL "sqlite:///cache/Destatis/Durchschn_Nettokaltmiete.sqlite3"
       output:
         module: "envirodata.services.destatis"
