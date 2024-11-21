@@ -124,7 +124,7 @@ class Loader(BaseLoader):
 
         table = Table("data", metadata, *columns)
 
-        table.create(engine)
+        table.create(engine, checkfirst=True)
 
         df.to_sql("data", con=engine, if_exists="append", index=False)
 
