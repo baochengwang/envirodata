@@ -8,6 +8,9 @@ import subprocess
 from argparse import ArgumentParser
 
 import confuse  # type: ignore
+import shutil
+from urllib.parse import urlparse
+import requests
 
 import logging
 
@@ -114,3 +117,25 @@ def get_git_commit_hash():
     except subprocess.CalledProcessError as exc:
         logger.critical("Could not determine git commit hash: %s", str(exc))
         return "unknown"
+
+
+def copy_or_download(input_url, output_path):
+    input_path = urlparse(input_url)
+
+    if input_path.scheme in ("file", ""):
+        if os.path.exists(input_url):
+            shutil.copy(input_url, output_path)
+        else:
+            logger.critical(
+                "Input path %s does not exist.",
+                input_url,
+            )
+    elif input_path.scheme in ("http", "https"):
+        try:
+            r = requests.get(input_url, allow_redirects=True, timeout=120)
+            open(output_path, "wb").write(r.content)
+        except Exception:
+            logger.critical(
+                "Input URL %s could not be downloaded.",
+                input_url,
+            )
