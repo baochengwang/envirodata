@@ -1,0 +1,6 @@
+name: Durchschnittsalter
+long_name: Durchschnittsalter
+description: "Durchschnittsalter der Bevölkerung in Jahren am 15.05.2022 in 100m-Gitterzellen"
+units: "years"
+statistics:
+  - current

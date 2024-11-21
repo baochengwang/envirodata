@@ -1,0 +1,6 @@
+name: Einwohner
+long_name: Einwohner
+description: "Bevoelkerungszahl in Personen"
+units: "-"
+statistics:
+  - current
