@@ -222,6 +222,10 @@ class BaseGetter(metaclass=abc.ABCMeta):
         logger.debug(statistic.name)
         result = statistic.function(times_local, values)
 
+        # stupid JSON encoder shortcoming: can't encode int64
+        if isinstance(result, np.int64):
+            result = int(result)
+
         return result
 
     def _get_statistics_time_range(
