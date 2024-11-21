@@ -83,7 +83,8 @@ environment:
       input:
         module: "envirodata.services.destatis"
         config:
-          csv_path: "/Users/knotechr/Downloads/Zensus2022_Bevoelkerungszahl/Zensus2022_Bevoelkerungszahl_100m-Gitter.csv"
+          #csv_path: "/Users/knotechr/Downloads/Zensus2022_Bevoelkerungszahl/Zensus2022_Bevoelkerungszahl_100m-Gitter.csv"
+          csv_path: "https://megastore.rz.uni-augsburg.de/get/LwxXATa3FL/"
           db_url: &BEVOELKERUNG_DB_URL "sqlite:///cache/Destatis/Bevoelkerungszahl.sqlite3"
       output:
         module: "envirodata.services.destatis"
@@ -107,7 +108,7 @@ environment:
         module: "envirodata.services.destatis"
         config:
           #csv_path: "/Users/knotechr/Downloads/Durchschnittsalter_in_Gitterzellen/Zensus2022_Durchschnittsalter_100m-Gitter.csv"
-          csv_path: "/Users/knotechr/Downloads/Durchschnittsalter_in_Gitterzellen/Zensus2022_Durchschnittsalter_100m-Gitter.csv"
+          csv_path: "https://megastore.rz.uni-augsburg.de/get/HA4L46wkBb/"
           db_url: &ALTER_DB_URL "sqlite:///cache/Destatis/Durchschnittsalter.sqlite3"
       output:
         module: "envirodata.services.destatis"
