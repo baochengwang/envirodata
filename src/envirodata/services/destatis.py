@@ -109,9 +109,9 @@ class Loader(BaseLoader):
             elif "float" in dtype.name:
                 return Float
             elif "object" in dtype.name:
-                return String(255)
+                return String
             else:
-                return String(255)
+                return String
 
         columns: list[Column] = [
             Column(
@@ -126,7 +126,7 @@ class Loader(BaseLoader):
 
         table.create(engine, checkfirst=True)
 
-        df.to_sql("data", con=engine, if_exists="replace", index=False)
+        df.to_sql("data", con=engine, if_exists="append", index=False)
 
 
 class Getter(BaseGetter):

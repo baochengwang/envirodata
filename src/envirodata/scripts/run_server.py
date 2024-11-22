@@ -16,13 +16,16 @@ from fastapi.responses import ORJSONResponse as JSONResponse
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 import pandas as pd
+import uvicorn.logging
 
 from envirodata.geocoder import Geocoder
 from envirodata.environment import Environment
 
 from envirodata.utils.general import get_cli_arguments, get_config, get_git_commit_hash
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
+logger.setLevel(logging.DEBUG)
 
 args = get_cli_arguments()
 
@@ -84,9 +87,9 @@ def main() -> None:
         # (1) geocode address
         try:
             longitude, latitude = geocoder.geocode(address)
-        except RuntimeError as exc:
+        except IOError as exc:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Geocoding address failed: {str(exc)}",
             ) from exc
 
@@ -203,8 +206,9 @@ def main() -> None:
         flat = pd.DataFrame()
         for id, envrow in result.items():
             try:
-                env = envrow["environment"]
-                env.update({"id": id})
+                env = {"id": id}
+                for service, data in envrow["environment"].items():
+                    env[service] = data["values"]
 
                 env_pd = pd.json_normalize(env)
             except KeyError:  # if getting env failed previously, make an empty row
