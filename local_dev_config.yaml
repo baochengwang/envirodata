@@ -1,6 +1,6 @@
 period:
-  start_date: "2010-01-01T00:00:00"
-  end_date: "2024-10-01T00:00:00"
+  start_date: "2000-01-01T00:00:00"
+  end_date: "2024-11-01T00:00:00"
 
 fastapi:
   debug: True,
