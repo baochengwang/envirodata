@@ -1,0 +1,66 @@
+{% extends "_base.html" %}
+
+{% block content %}
+
+<div class="card mb-3">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+            {% for sname, service in metadata.items() -%}
+            <li class="nav-item">
+                <a href="#{{ sname }}" class="nav-link {% if loop.first %}active{%endif%}" {% if
+                    loop.first%}aria-current="true" {% endif %} href="#{{ sname }}" data-bs-toggle="tab">{{
+                    sname }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="tab-content">
+        {% for sname, service in metadata.items() -%}
+        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ sname }}">
+            <div class="card-body">
+                <h4>{{ sname }}</h4>
+                {% if service.service is not none %}
+                <h5>Description</h5>
+                <p class="card-text">
+                <table class="table">
+                    <tbody>
+                        {% for dname, dtext in service.service.items() -%}
+                        <tr>
+                            <td>{{ dname }}</td>
+                            <td>{{ dtext }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </p>
+                {% endif %}
+                <h5>Variables</h5>
+                <p class="card-text">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Units</th>
+                            <th scope="col">Long name</th>
+                            <th scope="col">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vname, variable in service.variables.items() -%}
+                        <tr>
+                            <td>{{ variable.name }}</td>
+                            <td>{{ variable.units }}</td>
+                            <td>{{ variable.long_name }}</td>
+                            <td>{{ variable.description }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

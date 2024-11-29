@@ -10,10 +10,12 @@ from io import BytesIO
 import pytz
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, status, UploadFile
+from fastapi import FastAPI, HTTPException, status, UploadFile, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse as JSONResponse
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 import pandas as pd
 import uvicorn.logging
@@ -32,6 +34,10 @@ args = get_cli_arguments()
 config = get_config(args.config_file)
 
 app = FastAPI(**config["fastapi"])
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+templates = Jinja2Templates(directory="templates")
 
 geocoder = Geocoder(**config["geocoder"])
 environment = Environment(config["environment"])
@@ -106,6 +112,17 @@ def main() -> None:
         return result
 
     @app.get("/")
+    def home(request: Request):
+        return templates.TemplateResponse("home.html", context={"request": request})
+
+    @app.get("/metadata")
+    def metadata(request: Request):
+        return templates.TemplateResponse(
+            "metadata.html",
+            context={"request": request, "metadata": environment.metadata()},
+        )
+
+    @app.get("/manual")
     def retrieve(
         date: datetime.datetime,
         address: str,
@@ -139,7 +156,7 @@ def main() -> None:
 
         return JSONResponse(json_result)
 
-    @app.get("/by_elements")
+    @app.get("/manual_by_elements")
     def retrieve_by_elements(
         date: datetime.datetime,
         postcode: str,
@@ -171,25 +188,17 @@ def main() -> None:
         )
         return retrieve(date, address)
 
-    @app.get("/excel")
-    async def excel() -> HTMLResponse:
-        content = """
-<body>
-<form action="/upload_excel/" enctype="multipart/form-data" method="post">
-<input name="file" type="file">
-<input type="submit">
-</form>
-</body>
-                """
-
-        return HTMLResponse(content=content)
-
-    @app.post("/upload_excel/")
+    @app.post("/excel")
     async def create_upload_file(file: UploadFile) -> StreamingResponse:
 
         contents = file.file.read()
         data = BytesIO(contents)
-        df = pd.read_excel(data)
+        try:
+            df = pd.read_excel(data, usecols=["id", "date", "address"])
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+            )
 
         result = {}
 
