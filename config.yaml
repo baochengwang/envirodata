@@ -32,7 +32,7 @@ environment:
     latmax: &latmax 50.6
   services:
     - label: "DWD"
-      variables: "variables/DWD"
+      metadata: "services/DWD"
       input:
         module: "envirodata.services.dwd"
         config: {}
@@ -41,7 +41,7 @@ environment:
         config:
           api_url: "http://brightsky-web-1:5000/weather"
     - label: "AirBASE"
-      variables: "variables/AirBASE"
+      metadata: "services/AirBASE"
       input:
         module: "envirodata.services.airbase"
         config:
@@ -64,7 +64,7 @@ environment:
             "PM2.5": "PM2.5"
             "PM10": "PM10"
     - label: "Noise_mapping"
-      variables: "variables/Noise_mapping"
+      metadata: "services/Noise_mapping"
       input:
         module: "envirodata.services.geotiff"
         config:
@@ -79,7 +79,7 @@ environment:
         config:
           cache_path: *NOISE_CACHE_PATH
     - label: "Bevoelkerung"
-      variables: "variables/Bevoelkerung"
+      metadata: "services/Bevoelkerung"
       input:
         module: "envirodata.services.destatis"
         config:
@@ -91,7 +91,7 @@ environment:
         config:
           db_url: *BEVOELKERUNG_DB_URL
     - label: "Durchschn_Nettokaltmiete"
-      variables: "variables/Durchschn_Nettokaltmiete"
+      metadata: "services/Durchschn_Nettokaltmiete"
       input:
         module: "envirodata.services.destatis"
         config:
@@ -103,7 +103,7 @@ environment:
         config:
           db_url: *NETTOMIETE_DB_URL
     - label: "Durchschnittsalter"
-      variables: "variables/Durchschnittsalter"
+      metadata: "services/Durchschnittsalter"
       input:
         module: "envirodata.services.destatis"
         config:

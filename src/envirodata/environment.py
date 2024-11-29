@@ -53,6 +53,9 @@ class Environment:
                 logger.info("Loading data for service %s", servicename)
                 service.load(start_date, end_date)
 
+    def metadata(self) -> dict:
+        return {name: service.metadata() for name, service in self.services.items()}
+
     def get(
         self,
         date: datetime.datetime,

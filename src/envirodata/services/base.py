@@ -333,7 +333,14 @@ class Service:
         information on input and output config.
         :type config: dict | OrderedDict | confuse.Configuration
         """
-        self.variables: list[Variable] = self._load_variables(config["variables"])
+        self.variables: list[Variable] = self._load_variables(
+            os.path.join(config["metadata"], "variables")
+        )
+
+        self._metadata = yaml.load(
+            open(os.path.join(config["metadata"], "metadata.yaml"), "rb"),
+            yaml.SafeLoader,
+        )
 
         self._loader: None | BaseLoader = None
         self._loader_config = config["input"]
@@ -367,6 +374,14 @@ class Service:
 
         self._loader.load(start_date, end_date)
 
+    def metadata(self) -> dict[str, dict]:
+        metadata = {"service": self._metadata}
+        metadata["variables"] = {
+            variable.name: variable.metadata for variable in self.variables
+        }
+
+        return metadata
+
     def get(
         self,
         date: datetime.datetime,
@@ -394,7 +409,5 @@ class Service:
                 variable.name: self._getter.get(date, longitude, latitude, variable)
                 for variable in self.variables
             },
-            "metadata": {
-                variable.name: variable.metadata for variable in self.variables
-            },
+            "metadata": self.metadata(),
         }
