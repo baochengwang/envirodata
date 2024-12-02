@@ -1,0 +1,54 @@
+{% extends "_base.html" %}
+
+{% block js %}
+
+<script type="text/javascript">
+    function manualEnvirocode() {
+        const date = document.getElementById('date').value;
+        const address = document.getElementById('address').value;
+        const outputElement = document.getElementById('output');
+        outputElement.innerHTML = "processing ...";
+        fetch("/api/html?" + new URLSearchParams({ date: date, address: address }), {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        })
+            .then(response => response.text())
+            .then(res => {
+                console.log(res);
+                outputElement.innerHTML = res;
+            })
+            .catch(err => {
+                console.log(err);
+                outputElement.innerHTML = "Unsuccessful request";
+            });
+    }
+</script>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="card mb-3">
+    <div class="card-header">Envirocoding of a single address + date combination.</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col">
+                <label for="date" class="form-label">Date</label>
+                <input type="datetime-local" class="form-control" id="date" name="date" aria-describedby="date">
+                <div id="dateHelp" class="form-text">Date in local time</div>
+            </div>
+            <div class="col">
+                <label for="address" class="form-label">Address</label>
+                <input type="text" class="form-control" id="address" name="address">
+                <div id="addressHelp" class="form-text">Address to geocode</div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary" onclick="manualEnvirocode();">Envirocode</button>
+    </div>
+</div>
+
+<div id="output"></div>
+
+{% endblock %}

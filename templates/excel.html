@@ -1,0 +1,175 @@
+{% extends "_base.html" %}
+
+{% block js %}
+
+<script type="text/javascript">
+
+    oldColor = "bg-secondary";
+
+    function updateProgressbar(state) {
+        const progress = document.getElementById('progressbar');
+        const download = document.getElementById('download');
+        if (state == "PENDING") {
+            progress.innerHTML = "ready";
+            newColor = "bg-secondary";
+            progress.classList.remove(oldColor);
+            progress.classList.add(newColor);
+            oldColor = newColor;
+            progress.style.width = "100%";
+            progress.ariaValueNow = 100;
+            download.disabled = true;
+        } else if (state == "SUCCESS") {
+            progress.innerHTML = "done";
+            newColor = "bg-success";
+            progress.classList.remove(oldColor);
+            progress.classList.add(newColor);
+            oldColor = newColor;
+            progress.style.width = "100%";
+            progress.ariaValueNow = 100;
+            download.disabled = false;
+        } else if (!isNaN(state)) {
+            progress.innerHTML = "working (" + state + "%)";
+            newColor = "bg-warning";
+            progress.classList.remove(oldColor);
+            progress.classList.add(newColor);
+            oldColor = newColor;
+            progress.style.width = state + "%";
+            progress.ariaValueNow = state;
+            download.disabled = true;
+        } else {
+            console.log("Unknown state: " + state);
+            download.disabled = true;
+        }
+    }
+
+    function excelUpdateStatus() {
+        fetch("/api/excel/status", {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        })
+            .then(response => response.json())
+            .then(res => {
+                updateProgressbar(res)
+            })
+            .catch(err => {
+                console.log(err);
+                updateProgressbar("Unsuccessful request");
+            });
+    }
+
+    function excelEnvirocode() {
+        const status = document.getElementById('status');
+        const file = document.getElementById('file').files[0];
+        var formData = new FormData();
+        formData.append('file', file);
+        fetch("/api/excel/submit", {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.text())
+            .then(res => {
+                status.innerHTML = res;
+                console.log(res);
+            })
+            .catch(err => {
+                console.log(err);
+            });
+    }
+
+    function resetProgress() {
+        fetch("/api/excel/reset", {
+            method: 'GET',
+        })
+            .catch(err => {
+                console.log(err);
+                updateProgressbar("Unsuccessful request");
+            });
+    }
+
+    function downloadExcel() {
+        fetch("/api/excel/get", {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            },
+        })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.style.display = "none";
+                a.href = url;
+                // the filename you want
+                a.download = "environment.xlsx";
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                resetProgress();
+            })
+            .catch(err => {
+                console.log(err);
+                updateProgressbar("Unsuccessful request");
+            });
+    }
+
+    var timerId = null;
+    if (timerId == null) {
+        timerId = setInterval(excelUpdateStatus, 500);
+    }
+</script>
+
+
+
+
+
+
+
+
+{% endblock %}
+
+{% block content %}
+
+<div class="card mb-3">
+    <div class="card-header">Envirocoding of address + date combinations in an Excel file.</div>
+    <div class="card-body">
+        <p class="card-text">Excel file needs data in three columns with these (exact!) labels in the first row:<br>
+            <code>id, date, address</code>
+        </p>
+
+        <div class="mb-3">
+            <label for="file" class="form-label">File</label>
+            <input type="file" class="form-control" id="file" name="file">
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">Result</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col">Status: <p id="status">
+                </p>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col text-center">
+                <button type="submit" class="btn btn-primary" onclick="excelEnvirocode();">Envirocode</button>
+            </div>
+            <div class="col-9 text-center">
+                <div class="progress">
+                    <div class="progress-bar bg-secondary" role="progressbar" style="width: 100%;" aria-valuenow="100"
+                        aria-valuemin="0" aria-valuemax="100" id="progressbar">ready</div>
+                </div>
+            </div>
+            <div class="col text-center">
+                <button type="submit" class="btn btn-secondary" id="download" disabled
+                    onclick="downloadExcel();">Download</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

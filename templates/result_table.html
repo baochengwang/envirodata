@@ -1,0 +1,57 @@
+<div class="card mb-3">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+            {% for sname, service in environment.items() -%}
+            <li class="nav-item">
+                <a href="#{{ sname }}" class="nav-link {% if loop.first %}active{%endif%}" {% if
+                    loop.first%}aria-current="true" {% endif %} href="#{{ sname }}" data-bs-toggle="tab">{{
+                    sname }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="tab-content">
+        {% for sname, service in environment.items() -%}
+        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ sname }}">
+            <div class="card-body">
+                <div class="accordion" id="accordion{{sname}}">
+                    {% for vname, variable in service["values"].items() -%}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapse{{sname}}{{vname}}" aria-expanded="true"
+                                aria-controls="collapse{{sname}}{{vname}}">
+                                <strong>{{service["metadata"]["variables"][vname]["name"]}}</strong>
+                            </button>
+                        </h2>
+                        <div id="collapse{{sname}}{{vname}}" class="accordion-collapse collapse"
+                            data-bs-parent="#accordion{{sname}}">
+                            <div class="accordion-body">
+                                <p>{{service["metadata"]["variables"][vname]["description"]}}
+                                    (<strong>{{service["metadata"]["variables"][vname]["units"]}}</strong>)</p>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Statistic</th>
+                                            <th scope="col">Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for statname, statvalue in variable.items() -%}
+                                        <tr>
+                                            <td>{{ statname }}</td>
+                                            <td>{{ statvalue }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
