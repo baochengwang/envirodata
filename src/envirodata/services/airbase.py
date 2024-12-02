@@ -212,7 +212,6 @@ class Getter(BaseGetter):
     def __init__(
         self,
         cache_path: str,
-        variable_translation_table: dict,
     ):
         """Get values from dataset.
 
@@ -220,12 +219,8 @@ class Getter(BaseGetter):
         :type cache_path: str
         :param countries: list of country abbreviations to get
         :type countries: list, defaults to all countries
-        :param variable_translation_table: Translation table from file variable name
-        to name in Envirodata API.
-        :type variable_translation_table: dict
         """
         self.cache_path = cache_path
-        self.variable_translation_table = variable_translation_table
 
         if not os.path.exists(os.path.join(self.cache_path, METADATA_FNAME)):
             raise IOError("No metadata found - did you load data?")
@@ -289,9 +284,6 @@ class Getter(BaseGetter):
         :rtype: tuple[list[datetime.datetime], list[float]]
         """
 
-        # name as used in dataset
-        pl = self.variable_translation_table[variable]
-
         ds = self.metadata.copy()
 
         # stations that ever started measuring
@@ -312,7 +304,7 @@ class Getter(BaseGetter):
             return [start_date], [np.nan]
 
         # and only stations that actually measure that pollutant
-        ds = ds[ds["Air Pollutant"] == pl]
+        ds = ds[ds["Air Pollutant"] == variable]
 
         if ds.empty:
             return [start_date], [np.nan]

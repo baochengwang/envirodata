@@ -35,8 +35,8 @@ class Loader(BaseLoader):
 
     def __init__(
         self,
-        csv_path: str,
         db_url: str,
+        csv_paths: dict[str, str],
         separator: str = ";",
         decimal: str = ",",
         grid_id_field: str = "GITTER_ID_100m",
@@ -52,7 +52,7 @@ class Loader(BaseLoader):
         :type separator: str
 
         """
-        self.csv_path = csv_path
+        self.csv_paths = csv_paths
         self.csv_separator = separator
         self.csv_decimal = decimal
         self.db_url = db_url
@@ -69,24 +69,12 @@ class Loader(BaseLoader):
         self.cache_path = cache_path
         os.makedirs(self.cache_path, exist_ok=True)
 
-    def load(
-        self,
-        start_date: datetime.datetime,
-        end_date: datetime.datetime,
-    ) -> None:
-        """Load (cache) all data between given dates.
-
-        :param start_date: First date to load
-        :type start_date: datetime.datetime
-        :param end_date: Last date to load
-        :type end_date: datetime.datetime
-        """
-
+    def _load_csv(self, variable_name: str, csv_path: str):
         tmp_path = os.path.join(
             self.cache_path, str(random.randint(10, 1000000)) + ".csv"
         )
         copy_or_download(
-            self.csv_path,
+            csv_path,
             tmp_path,
         )
 
@@ -122,11 +110,27 @@ class Loader(BaseLoader):
             for name, dtype in df.dtypes.items()
         ]
 
-        table = Table("data", metadata, *columns)
+        table = Table(variable_name, metadata, *columns)
 
         table.create(engine, checkfirst=True)
 
-        df.to_sql("data", con=engine, if_exists="append", index=False)
+        df.to_sql(variable_name, con=engine, if_exists="append", index=False)
+
+    def load(
+        self,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
+    ) -> None:
+        """Load (cache) all data between given dates.
+
+        :param start_date: First date to load
+        :type start_date: datetime.datetime
+        :param end_date: Last date to load
+        :type end_date: datetime.datetime
+        """
+
+        for variable_name, csv_path in self.csv_paths.items():
+            self._load_csv(variable_name, csv_path)
 
 
 class Getter(BaseGetter):
@@ -150,13 +154,11 @@ class Getter(BaseGetter):
         self.grid_field_id = grid_id_field
 
         # table needs primary key for this to work!
-        Base = automap_base()
+        self.base = automap_base()
 
         engine = create_engine(db_url)
 
-        Base.prepare(autoload_with=engine)
-
-        self.data = Base.classes.data
+        self.base.prepare(autoload_with=engine)
         self.session = Session(engine)
 
     @property
@@ -189,8 +191,8 @@ class Getter(BaseGetter):
             longitude, latitude, cell_size=self.resolution
         )
 
-        grid_column = getattr(self.data, self.grid_field_id)
-        var_column = getattr(self.data, variable)
+        grid_column = getattr(self.base.classes[variable], self.grid_field_id)
+        var_column = getattr(self.base.classes[variable], variable)
 
         stmt = select(var_column).where(grid_column == grid_id)
 

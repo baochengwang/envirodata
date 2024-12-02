@@ -1,5 +1,5 @@
 name: durchschnMieteQM
-long_name: durchschnMieteQM
+long_name: urchschn_Nettokaltmiete
 description: "Durchschnittliche Nettokaltmiete/qm der vermieteten Wohnungen in Wohngebäuden (ohne Wohnheime) in EUR"
 units: "EUR"
 statistics:

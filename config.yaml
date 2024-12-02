@@ -1,6 +1,6 @@
 period:
   start_date: "2000-01-01T00:00:00"
-  end_date: "2024-11-01T00:00:00"
+  end_date: "2024-12-01T00:00:00"
 
 fastapi:
   debug: True,
@@ -53,16 +53,6 @@ environment:
         module: "envirodata.services.airbase"
         config:
           cache_path: *AIRBASE_CACHE_PATH
-          variable_translation_table:
-            "CO": "CO" 
-            "O3": "O3" 
-            "NO2": "NO2"
-            "SO2": "SO2"
-            "NH3": "NH3"
-            "HCHO": "HCHO"
-            "PM1": "PM1"
-            "PM2.5": "PM2.5"
-            "PM10": "PM10"
     - label: "Noise_mapping"
       metadata: "services/Noise_mapping"
       input:
@@ -78,40 +68,20 @@ environment:
         module: "envirodata.services.geotiff"
         config:
           cache_path: *NOISE_CACHE_PATH
-    - label: "Bevoelkerung"
-      metadata: "services/Bevoelkerung"
+    - label: "Destatis"
+      metadata: "services/Destatis"
       input:
         module: "envirodata.services.destatis"
         config:
-          #csv_path: "/Users/knotechr/Downloads/Zensus2022_Bevoelkerungszahl/Zensus2022_Bevoelkerungszahl_100m-Gitter.csv"
-          csv_path: "https://megastore.rz.uni-augsburg.de/get/LwxXATa3FL/"
-          db_url: &BEVOELKERUNG_DB_URL "sqlite:///cache/Bevoelkerungszahl.sqlite3"
+          db_url: &DESTATIS_DB_URL "sqlite:///cache/Destatis.sqlite3"
+          csv_paths: 
+            #"Durchschnittsalter": "/Users/knotechr/Downloads/Durchschnittsalter_in_Gitterzellen/Zensus2022_Durchschnittsalter_100m-Gitter.csv"
+            "Durchschnittsalter": "https://megastore.rz.uni-augsburg.de/get/HA4L46wkBb/"
+            #"Einwohner": "/Users/knotechr/Downloads/Zensus2022_Bevoelkerungszahl/Zensus2022_Bevoelkerungszahl_100m-Gitter.csv"
+            "Einwohner": "https://megastore.rz.uni-augsburg.de/get/LwxXATa3FL/"
+            #"durchschnMieteQM": "/Users/knotechr/Downloads/Zensus2022_Durchschn_Nettokaltmiete/Zensus2022_Durchschn_Nettokaltmiete_100m-Gitter.csv"
+            "durchschnMieteQM": "https://megastore.rz.uni-augsburg.de/get/hAy4HJhGfQ/"
       output:
         module: "envirodata.services.destatis"
         config:
-          db_url: *BEVOELKERUNG_DB_URL
-    - label: "Durchschn_Nettokaltmiete"
-      metadata: "services/Durchschn_Nettokaltmiete"
-      input:
-        module: "envirodata.services.destatis"
-        config:
-          #csv_path: "/Users/knotechr/Downloads/Zensus2022_Durchschn_Nettokaltmiete/Zensus2022_Durchschn_Nettokaltmiete_100m-Gitter.csv"
-          csv_path: "https://megastore.rz.uni-augsburg.de/get/hAy4HJhGfQ/"
-          db_url: &NETTOMIETE_DB_URL "sqlite:///cache/Durchschn_Nettokaltmiete.sqlite3"
-      output:
-        module: "envirodata.services.destatis"
-        config:
-          db_url: *NETTOMIETE_DB_URL
-    - label: "Durchschnittsalter"
-      metadata: "services/Durchschnittsalter"
-      input:
-        module: "envirodata.services.destatis"
-        config:
-          #csv_path: "/Users/knotechr/Downloads/Durchschnittsalter_in_Gitterzellen/Zensus2022_Durchschnittsalter_100m-Gitter.csv"
-          csv_path: "https://megastore.rz.uni-augsburg.de/get/HA4L46wkBb/"
-          db_url: &ALTER_DB_URL "sqlite:///cache/Durchschnittsalter.sqlite3"
-      output:
-        module: "envirodata.services.destatis"
-        config:
-          db_url: *ALTER_DB_URL
-
+          db_url: *DESTATIS_DB_URL
