@@ -16,6 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import OperationalError
 import pandas as pd
 import random
 
@@ -103,7 +104,7 @@ class Loader(BaseLoader):
 
         columns: list[Column] = [
             Column(
-                name,
+                str(name),
                 infer_sqlalchemy_type(dtype),
                 primary_key=(name == self.grid_id_field),  # make grid ID a primary key
             )
@@ -112,7 +113,11 @@ class Loader(BaseLoader):
 
         table = Table(variable_name, metadata, *columns)
 
-        table.create(engine, checkfirst=True)
+        try:
+            table.create(engine)
+        except OperationalError:
+            logger.info(f"Table {variable_name} already exists, not updating.")
+            return
 
         df.to_sql(variable_name, con=engine, if_exists="append", index=False)
 
@@ -165,6 +170,32 @@ class Getter(BaseGetter):
     def time_resolution(self):
         """Time resolution of the dataset."""
         return datetime.timedelta(days=1)  # useless?
+
+    def _get_range(
+        self,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
+        longitude: float,
+        latitude: float,
+        variable: str,
+    ) -> tuple[list[datetime.datetime], list[float]]:
+
+        logger.debug("Assuming time invariant fields!")
+
+        # just get once, then repeat (faster)
+        _, value = self._get(end_date, longitude, latitude, variable)
+
+        times = []
+        values = []
+        cur_date = start_date
+        while cur_date < end_date:
+            times.append(cur_date)
+            values.append(value)
+            cur_date += self.time_resolution
+        times.append(end_date)
+        values.append(value)
+
+        return times, values
 
     def _get(
         self,
