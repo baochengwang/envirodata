@@ -1,82 +1,65 @@
-# EnviroData Project
+# EnviroData - envirocoding for the masses!
 
 Provide geocoded environmental factor attribution for health care applications.
 
 This repository provides a Python package called `envirodata`, as well as a Docker container.
 
-The application is split into 2 parts:
+## Problem statement
 
- 1) Preparation and downloading of environmental data
+Understanding impacts of the environment on health requires estimation of the personal exposure of each individual (patient, cohort participant, ...) and finding associations with health outcomes.
 
-Environmental data is downloaded and cached locally. This requires internet access. Needs to be done upon inital installation, 
-and potentially repeated to cache new data.
+Environmental factors (e.g., air temperature, air quality, distance to green space, mean household income) vary in space and time, they are spatiotemporal fields. Often, this happens on very small spatial scales. Example: if you investigate health effects of ambient noise, it makes a 
+large difference if you live right next to a motorway, or one block away.
 
- 2) Run local envirodata service
+Epidemiological studies on environmental influences face a problem: location (be it residential address or movement patterns) are personal identifiable information, and need to be protected, especially when they are in a health context.
 
-Environmental factor attribution can be requested through a REST-API. No internet access needed, all actions are local and conform
-with data protection. This is the default mode to run envirodata.
+The traditional way is to degrade location information until anonymity can be ensured, e.g. by using postcode only instead of street address. This step happens within the guarded context of, e.g., a hospital or a study center. Degraded (anonymized) location information can then be transferred out of the guarded context and associated with environmental factors (e.g., within a specialized research group at a university). 
 
-## Setup
+However:
+ - important details in environmental exposure estimates are lost
+ - each research project has to repeat this work again and again
 
- 1) Install [docker](https://www.docker.com), e.g. follow [these instructions](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository) for Ubunutu. On Linux, all `docker` will need to be `sudo'ed` unless you are root.
+## Proposed solution
 
- 2) Clone envirodata repo (need username or deploy token - contact us):
+Instead of taking degraded location information out of the guarded context, we bring the environmental factors into the guarded context and provide a way to associate them in a data protection compliant manner. The following components are needed:
 
-    `git clone https://git.rz.uni-augsburg.de/mmbees-git/envirodata.git`
+### Local geocoder
 
- 3) Go to the directory where you cloned the repository in.
+A way to translate an address into a geographic coordinate locally on a computer without resorting to external services (e.g., Google Maps).
 
-    `cd envirodata`
+### Data cache, extractor and aggregator
+ 
+A way to cache various datasets on environmental factors locally. Methods to extract from these datasets at specified location / time combinations. Provisions to calculate statistical averages over space and time.
 
- 4) Setup and start dockerized Nomatim geocoder:
+## Structure of EnviroData
 
-   `bash tools/setup_nomatim_docker.bash`
+The EnviroData application is therefore split into 2 parts:
 
- 5) Setup and start BrightSky DWD data provider:
+### (1) Preparation and downloading of data (online)
 
-   `bash tools/setup_brightsky_api.bash`
+This requires internet access. Needs to be done upon inital installation outside of the guarded context. Potentially, it needs to be repeated when new data becomes available. 
 
- 6) Build envirodata docker container:
+ - Setting up a local geocoder with current data.
+ - Download environmental data and cache locally.
 
-   `bash tools/build_envirodata_docker.bash`
+### (2) Provide offline envirocoding service in guarded context
 
- 7) Start an Envirodata container and load data
+Provide a set of methods (API) to request environmental factor information for a given combination of address and time. No internet access needed, all actions are local and conform with data protection. This is the default mode to run envirodata.
 
-    `bash tools/run_loader_container.bash`
+## Implementation
 
- 8) Run the Envirodata service
+EnviroData consists of:
 
-    `bash tools/start_server_container.bash`
-
-## Configuration
-
-`envirodata` is configured through one configuration file, `config.yaml`, in `WORKPATH`.
-
-## Setup and running
-
-For development, usage without actually installing the package works through calling `poetry shell` when in `WORKPATH`. This gives you a shell with access to a `python3` that knows about the new package, and also enables command line scripts (e.g., `load_data`, `run_server`) defined in `pyproject.toml`.
-
-### Preparation and downloading data
-
-    Uses the `src/envirodata/Environment.py` class to cache data from all services defined in `config.yaml`.
-
-    Just execute `load_data` and wait (will be several hours!).
-
-## Running
-
-    Just execute `run_server`.
-
-    Runs a [FastAPI](https://fastapi.tiangolo.com) server,uses `src/envirodata/Geocoder.py` to geocode address requests, and requests environmental parameters from `src/envirodata/Environment.py`.
-
-    You can test the API by pointing your browser to http://localhost:8000/docs.
+ - Geocoding: Offline geocoding using the [Nominatim](https://nominatim.org) geocoder based on OpenStreetMap data
+ - Services: An extensible way to add new environmental factor datasets
+ - Statistics: A way to define new statistical aggregations
+ - API: methods to retrieve individual exposure information
 
 ## Services implemented
 
 ### CDSAPI
 
-Get model data fields from Copernicus (model results) [Atmosphere Data Store](https://ads.atmosphere.copernicus.eu/) or the [Climate Data Store](https://cds.climate.copernicus.eu/).
-
-Model data is cached as NetCDF files.
+Get model data fields from Copernicus (model results) [Atmosphere Data Store](https://ads.atmosphere.copernicus.eu/) or the [Climate Data Store](https://cds.climate.copernicus.eu/). Model data is cached as NetCDF files.
 
 ### DWD
 
@@ -93,9 +76,3 @@ GeoTIFF data is cached by copying the files into the cache directory.
 ## Documentation
 
 [Sphinx](https://www.sphinx-doc.org/en/master/) API documentation can be created using `tools/build_docs.bash`, and then be found at `docs/_build/index.html`.
-
-
-# Tipps and tricks
-
-After installing poetry and making sure its installation location (e.g., `~/.local/bin`) is in `$PATH`, you might need to log out and log in again, before the correct poetry is picked up.
-

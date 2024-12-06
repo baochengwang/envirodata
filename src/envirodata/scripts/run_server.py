@@ -20,12 +20,16 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 import pandas as pd
+import markdown
 import uvicorn.logging
 
 from envirodata.geocoder import Geocoder
 from envirodata.environment import Environment
 
 from envirodata.utils.general import get_cli_arguments, get_config, get_git_commit_hash
+
+README_md_fpath = Path(__file__).parent.parent.parent.parent / "README.md"
+INSTALL_md_fpath = Path(__file__).parent.parent.parent.parent / "INSTALL.md"
 
 # logger = logging.getLogger(__name__)
 logger = logging.getLogger("uvicorn.error")
@@ -202,7 +206,21 @@ def main() -> None:
 
     @app.get("/")
     def home(request: Request):
-        return templates.TemplateResponse("home.html", context={"request": request})
+        with open(README_md_fpath, "r") as f:
+            readme_str = f.read()
+        readme_html = markdown.markdown(readme_str)
+        return templates.TemplateResponse(
+            "home.html", context={"request": request, "readme": readme_html}
+        )
+
+    @app.get("/install")
+    def install(request: Request):
+        with open(INSTALL_md_fpath, "r") as f:
+            install_str = f.read()
+        install_html = markdown.markdown(install_str)
+        return templates.TemplateResponse(
+            "install.html", context={"request": request, "install": install_html}
+        )
 
     @app.get("/manual")
     def manual(request: Request):
