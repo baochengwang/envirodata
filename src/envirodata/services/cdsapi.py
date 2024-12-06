@@ -26,9 +26,11 @@ class Loader(BaseLoader):
         cdsurl: str | None = os.environ.get("CDSAPI_URL"),
         cdskey: str | None = os.environ.get("CDSAPI_KEY"),
         dataset_start_date: datetime.datetime | str = datetime.datetime(
-            1, 1, 1, tzinfo=datetime.UTC
+            1, 1, 1, tzinfo=datetime.timezone.utc
         ),
-        dataset_end_date: datetime.datetime | str = datetime.datetime.now(datetime.UTC),
+        dataset_end_date: datetime.datetime | str = datetime.datetime.now(
+            datetime.timezone.utc
+        ),
     ) -> None:
         """Load (cache) cdsapi dataset.
 
@@ -54,13 +56,15 @@ class Loader(BaseLoader):
             dataset_start_date = datetime.datetime.fromisoformat(dataset_start_date)
 
         if dataset_start_date.tzinfo is None:
-            dataset_start_date = dataset_start_date.replace(tzinfo=datetime.UTC)
+            dataset_start_date = dataset_start_date.replace(
+                tzinfo=datetime.timezone.utc
+            )
 
         if not isinstance(dataset_end_date, datetime.datetime):
             dataset_end_date = datetime.datetime.fromisoformat(dataset_end_date)
 
         if dataset_end_date.tzinfo is None:
-            dataset_end_date = dataset_end_date.replace(tzinfo=datetime.UTC)
+            dataset_end_date = dataset_end_date.replace(tzinfo=datetime.timezone.utc)
 
         self.dataset_start_date = dataset_start_date
         self.dataset_end_date = dataset_end_date
