@@ -26,13 +26,17 @@
 
 Start an Envirodata container and load data
 
-    `bash deploy/03_run_loader_container.bash`
+  `bash deploy/03_run_loader_container.bash`
 
-This might well take several hours.
+This might well take several hours up to a day.
 
 ## Running the service
 
-    `bash deploy/05_start_server_container.bash`
+  `bash deploy/05_start_server_container.bash`
+
+The Envirodata service now runs as a docker container. You can access the user interface in your browser at
+
+[localhost:8000](http://localhost:8000/)
 
 ## Configuration
 
