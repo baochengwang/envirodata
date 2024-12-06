@@ -1,0 +1,15 @@
+name: pm2p5_conc
+long_name: pm2p5_concentration
+description: "Ambient air concentration of particulate matter below 2.5 micrometer in diameter"
+units: "ug/m3"
+statistics:
+  - current
+  - day_min
+  - day_mean
+  - day_max
+  - 3day_min
+  - 3day_mean
+  - 3day_max
+  - 7day_min
+  - 7day_mean
+  - 7day_max

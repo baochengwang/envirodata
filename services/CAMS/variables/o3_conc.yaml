@@ -1,0 +1,18 @@
+name: o3_conc
+long_name: o3_concentration
+description: "Ambient air concentration of ozone"
+units: "ug/m3"
+statistics:
+  - current
+  - mda8
+  - 3day_mean_mda8
+  - 7day_mean_mda8
+  - day_min
+  - day_mean
+  - day_max
+  - 3day_min
+  - 3day_mean
+  - 3day_max
+  - 7day_min
+  - 7day_mean
+  - 7day_max

@@ -4,6 +4,7 @@ import os
 import logging
 import datetime
 import copy
+from typing import Any
 
 import cdsapi  # type: ignore
 import netCDF4  # type: ignore
@@ -24,6 +25,10 @@ class Loader(BaseLoader):
         output_fpath_pattern: str,
         cdsurl: str | None = os.environ.get("CDSAPI_URL"),
         cdskey: str | None = os.environ.get("CDSAPI_KEY"),
+        dataset_start_date: datetime.datetime | str = datetime.datetime(
+            1, 1, 1, tzinfo=datetime.UTC
+        ),
+        dataset_end_date: datetime.datetime | str = datetime.datetime.now(datetime.UTC),
     ) -> None:
         """Load (cache) cdsapi dataset.
 
@@ -45,6 +50,21 @@ class Loader(BaseLoader):
         self.cdsurl = cdsurl
         self.cdskey = cdskey
 
+        if not isinstance(dataset_start_date, datetime.datetime):
+            dataset_start_date = datetime.datetime.fromisoformat(dataset_start_date)
+
+        if dataset_start_date.tzinfo is None:
+            dataset_start_date = dataset_start_date.replace(tzinfo=datetime.UTC)
+
+        if not isinstance(dataset_end_date, datetime.datetime):
+            dataset_end_date = datetime.datetime.fromisoformat(dataset_end_date)
+
+        if dataset_end_date.tzinfo is None:
+            dataset_end_date = dataset_end_date.replace(tzinfo=datetime.UTC)
+
+        self.dataset_start_date = dataset_start_date
+        self.dataset_end_date = dataset_end_date
+
     def load(
         self,
         start_date: datetime.datetime,
@@ -57,10 +77,22 @@ class Loader(BaseLoader):
         :param end_date: Last date to load
         :type end_date: datetime.datetime
         """
-        cur_date = start_date
+        # iterate monthly
+        cur_date = start_date.replace(day=1, hour=0, minute=0)
         while cur_date <= end_date:
-            self._download_date(cur_date)
-            cur_date += datetime.timedelta(days=1)
+            if (
+                cur_date <= self.dataset_end_date
+                and cur_date >= self.dataset_start_date
+            ):
+                try:
+                    self._download_date(cur_date)
+                except IOError as exc:
+                    logger.info(
+                        f"Could not download data for {cur_date.strftime('%Y-%m')}: {exc}"
+                    )
+            # beginning of next month...
+            cur_date += datetime.timedelta(days=31)
+            cur_date = cur_date.replace(day=1)
 
     def _download_date(
         self,
@@ -79,12 +111,20 @@ class Loader(BaseLoader):
 
         if not os.path.exists(output_fname):
             try:
-                c = cdsapi.Client(url=self.cdsurl, key=self.cdskey)
+                c = cdsapi.Client(quiet=True, url=self.cdsurl, key=self.cdskey)
                 request = copy.copy(self.request)
 
                 for datevar in ["date", "year", "month", "day"]:
                     if datevar in request:
-                        request[datevar] = date.strftime(request[datevar])
+                        # get until next month...
+                        end_date = date + datetime.timedelta(days=31)
+                        end_date = end_date.replace(day=1) - datetime.timedelta(days=1)
+
+                        request[datevar] = (
+                            date.strftime("%Y-%m-%d")
+                            + "/"
+                            + end_date.strftime("%Y-%m-%d")
+                        )
 
                 logger.info(
                     "Downloading from %s for %s", self.dataset, date.isoformat()
@@ -116,7 +156,6 @@ class Getter(BaseGetter):
         self,
         cache_fpath_pattern: str,
         time_calculation: str,
-        variable_translation_table: dict,
     ):
         """Get values from dataset.
 
@@ -127,13 +166,9 @@ class Getter(BaseGetter):
         :param time_calculation: How to calculate date from NetCDF time variable
         (name of option in self.time_calculators)
         :type time_calculation: str
-        :param variable_translation_table: Translation table from file
-        variable name to name in Envirodata API.
-        :type variable_translation_table: dict
         :raises IOError: Unable to find appropriate method to compute time.
         """
         self.cache_fpath_pattern = cache_fpath_pattern
-        self.variable_translation_table = variable_translation_table
 
         time_calculators = {
             "time_since_analysis": self._calc_time_since_analysis,
@@ -143,6 +178,9 @@ class Getter(BaseGetter):
             raise ValueError("Unknown method to compute time.")
         self.calc_time = time_calculators[time_calculation]
 
+        self.lons = None
+        self.lats = None
+
     @property
     def time_resolution(self):
         """Time resolution of the dataset."""
@@ -150,7 +188,7 @@ class Getter(BaseGetter):
 
     def _calc_time_since_analysis(
         self, date: datetime.datetime, nc: netCDF4.Dataset  # pylint: disable=no-member
-    ) -> list:
+    ) -> list[datetime.datetime]:
         """Calculate time from netCDF4 file as seconds since midnight of the
         current day.
 
@@ -169,7 +207,7 @@ class Getter(BaseGetter):
 
     def _calc_time_epoch(
         self, date: datetime.datetime, nc: netCDF4.Dataset  # pylint: disable=no-member
-    ) -> list:
+    ) -> datetime.datetime | np.ndarray[Any, np.dtype[np.object_]]:
         """Calculate time from netCDF4 file based on time variable attributes.
 
         :param date: Date to process
@@ -186,13 +224,21 @@ class Getter(BaseGetter):
             only_use_cftime_datetimes=False,
         )
 
-    def _get(
+    def _get_lons_lats(self, nc):
+        if self.lons is None:
+            self.lons, self.lats = np.meshgrid(
+                nc.variables["longitude"], nc.variables["latitude"]
+            )  # pylint: disable=unsubscriptable-object
+        return self.lons, self.lats
+
+    def _get_from_one(
         self,
-        date: datetime.datetime,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
         longitude: float,
         latitude: float,
         variable: str,
-    ) -> tuple[datetime.datetime, float]:
+    ) -> tuple[list[datetime.datetime], list[float]]:
         """Get value for variable out of cached NetCDF4 file
 
         :param date: Date to retrieve
@@ -209,52 +255,96 @@ class Getter(BaseGetter):
         :return: Value for variable at given point in time and space.
         :rtype: float
         """
-        output_fname = date.strftime(self.cache_fpath_pattern)
+
+        output_fname = start_date.strftime(self.cache_fpath_pattern)
 
         try:
             nc = netCDF4.Dataset(output_fname)  # pylint: disable=no-member
-        except OSError:
-            logger.info("No data found for {:s}!".format(date.strftime("%Y-%m-%d")))
-            return date, np.nan
+        except OSError as exc:
+            logger.info(
+                "No data found for {:s}!".format(start_date.strftime("%Y-%m-%d"))
+            )
+            raise exc
+
+        lons, lats = self._get_lons_lats(nc)
+
+        times = self.calc_time(start_date, nc)
+
+        tidxes = np.where(
+            np.logical_and(np.array(times) >= start_date, np.array(times) <= end_date)
+        )[0]
 
         def _get_index(lons, lats, lon, lat):
             ddelta = (lons - lon) ** 2 + (lats - lat) ** 2
             idxes = np.where(ddelta == np.min(ddelta))
             return (idxes[0][0], idxes[1][0])
 
-        lons, lats = np.meshgrid(
-            nc.variables["longitude"], nc.variables["latitude"]
-        )  # pylint: disable=unsubscriptable-object
-
-        times = self.calc_time(date, nc)
-
-        tdeltas = [np.abs((date - t).total_seconds()) for t in times]
-
-        tidx = np.where(tdeltas == np.min(tdeltas))[0][0]  # no idea why sub-levels
         xidx, yidx = _get_index(lons, lats, longitude, latitude)
 
-        fvarname = self.variable_translation_table[variable]
-
-        logger.debug(
-            "%s: %s, %s, %s is at %s: %s, %s, %s",
-            variable,
-            date.isoformat(),
-            longitude,
-            latitude,
-            fvarname,
-            tidx,
-            xidx,
-            yidx,
-        )
+        chosen_times = [times[i] for i in tidxes]
 
         try:
             if len(nc.dimensions) == 3:
-                return date, float(nc.variables[fvarname][tidx, yidx, xidx])
+                values = [float(nc.variables[variable][i, yidx, xidx]) for i in tidxes]
+                return chosen_times, values
             elif len(nc.dimensions) == 4:
-                return date, float(nc.variables[fvarname][tidx, 0, yidx, xidx])
+                values = [
+                    float(nc.variables[variable][i, 0, yidx, xidx]) for i in tidxes
+                ]
+                return chosen_times, values
             else:
                 raise RuntimeError("Unknown number of dimensions in NetCDF file.")
         except Exception as exc:
-            raise RuntimeError(
-                f"Could not get data for {variable} (file variable: {fvarname})"
-            ) from exc
+            raise RuntimeError(f"Could not get data for {variable}") from exc
+
+    def _get_range(
+        self,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
+        longitude: float,
+        latitude: float,
+        variable: str,
+    ) -> tuple[list[datetime.datetime], list[float]]:
+
+        # start with startdate
+        cur_start_date = start_date
+        # until the end of the month
+        cur_end_date = start_date + datetime.timedelta(days=31)
+        cur_end_date = cur_end_date.replace(
+            day=1, hour=0, minute=0
+        ) - datetime.timedelta(hours=1)
+        # or only up to the end_date if that is before end of month
+        cur_end_date = cur_end_date if cur_end_date <= end_date else end_date
+
+        times = []
+        values = []
+        while cur_start_date < end_date:
+            logger.debug("%s %s" % (cur_start_date, cur_end_date))
+            _times, _values = self._get_from_one(
+                cur_start_date, cur_end_date, longitude, latitude, variable
+            )
+
+            times += _times
+            values += _values
+
+            cur_start_date = cur_start_date + datetime.timedelta(days=31)
+            cur_start_date = cur_start_date.replace(day=1, hour=0, minute=0)
+
+            cur_end_date = cur_start_date + datetime.timedelta(days=31)
+            cur_end_date = cur_end_date.replace(
+                day=1, hour=0, minute=0
+            ) - datetime.timedelta(hours=1)
+            # or only up to the end_date if that is before end of month
+            cur_end_date = cur_end_date if cur_end_date <= end_date else end_date
+
+        return times, values
+
+    def _get(
+        self,
+        date: datetime.datetime,
+        longitude: float,
+        latitude: float,
+        variable: str,
+    ) -> tuple[datetime.datetime, float]:
+        _dates, _values = self._get_range(date, date, longitude, latitude, variable)
+        return _dates[0], _values[0]

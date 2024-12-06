@@ -85,3 +85,40 @@ environment:
         module: "envirodata.services.destatis"
         config:
           db_url: *DESTATIS_DB_URL
+    - label: "CAMS"
+      metadata: "services/CAMS"
+      input:
+        module: "envirodata.services.cdsapi"
+        config:
+          dataset: "cams-europe-air-quality-forecasts"
+          request:
+            model: "ensemble"
+            date: "%Y-%m-%d/%Y-%m-%d"
+            format: "netcdf"
+            variable: [
+                "nitrogen_dioxide",
+                "ozone",
+                "particulate_matter_2.5um"
+            ]
+            level: "0"
+            type: "analysis"
+            time: [
+                '00:00', '01:00', '02:00', '03:00', '04:00', '05:00',
+                '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
+                '12:00', '13:00', '14:00', '15:00', '16:00', '17:00',
+                '18:00', '19:00', '20:00', '21:00', '22:00', '23:00',
+            ]
+            leadtime_hour: "0"
+            area: [ *latmax, *lonmin, *latmin, *lonmax ]
+          output_fpath_pattern: &CAMS_CACHE_PATH_PATTERN "cache/cams/%Y%m.nc"
+          # cdsurl: ...
+          # cdskey: ...
+          dataset_start_date: "2022-01-01 00:00:00"
+          #dataset_end_date: "2024-01-01 00:00:00"
+      output:
+        module: "envirodata.services.cdsapi"
+        config:
+          cache_fpath_pattern: *CAMS_CACHE_PATH_PATTERN
+          time_calculation: "time_since_analysis"
+
+
