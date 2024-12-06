@@ -6,18 +6,32 @@
 
     oldColor = "bg-secondary";
 
-    function updateProgressbar(state) {
+    function update(message) {
+        state = "state" in message ? message["state"] : "PENDING"
+        messages = "messages" in message ? message["messages"] : ["", "", ""]
+        percent = "percent" in message ? message["percent"] : 0.0
+
+        updateProgressbar(state, percent);
+        updateButtons(state, percent);
+        updateMessages(messages);
+    }
+
+    function updateMessages(messages) {
+        const messageBoard = document.getElementById('messages');
+        console.log(messages);
+        messageBoard.innerHTML = messages.join("<br />");
+    }
+
+    function updateProgressbar(state, percent) {
         const progress = document.getElementById('progressbar');
-        const download = document.getElementById('download');
-        if (state == "PENDING") {
-            progress.innerHTML = "ready";
-            newColor = "bg-secondary";
+        if (state == "STARTED") {
+            progress.innerHTML = percent + "%";
+            newColor = "bg-warning";
             progress.classList.remove(oldColor);
             progress.classList.add(newColor);
             oldColor = newColor;
-            progress.style.width = "100%";
-            progress.ariaValueNow = 100;
-            download.disabled = true;
+            progress.style.width = percent + "%";
+            progress.ariaValueNow = percent;
         } else if (state == "SUCCESS") {
             progress.innerHTML = "done";
             newColor = "bg-success";
@@ -26,18 +40,44 @@
             oldColor = newColor;
             progress.style.width = "100%";
             progress.ariaValueNow = 100;
-            download.disabled = false;
-        } else if (!isNaN(state)) {
-            progress.innerHTML = "working (" + state + "%)";
-            newColor = "bg-warning";
+        } else if (state == "ERROR") {
+            progress.innerHTML = "failed";
+            newColor = "bg-failed";
             progress.classList.remove(oldColor);
             progress.classList.add(newColor);
             oldColor = newColor;
-            progress.style.width = state + "%";
-            progress.ariaValueNow = state;
-            download.disabled = true;
+            progress.style.width = "0%";
+            progress.ariaValueNow = 0;
         } else {
-            console.log("Unknown state: " + state);
+            progress.innerHTML = "ready";
+            newColor = "bg-secondary";
+            progress.classList.remove(oldColor);
+            progress.classList.add(newColor);
+            oldColor = newColor;
+            progress.style.width = "0%";
+            progress.ariaValueNow = 0;
+        }
+    }
+
+    function updateButtons(state, percent) {
+        const submit = document.getElementById('submit');
+        const reset = document.getElementById('reset');
+        const download = document.getElementById('download');
+        if (state == "PENDING") {
+            submit.disabled = false;
+            reset.disabled = true;
+            download.disabled = true;
+        } else if (state == "STARTED") {
+            submit.disabled = true;
+            reset.disabled = false;
+            download.disabled = true;
+        } else if (state == "SUCCESS") {
+            submit.disabled = true;
+            reset.disabled = false;
+            download.disabled = false;
+        } else {
+            submit.disabled = true;
+            reset.disabled = false;
             download.disabled = true;
         }
     }
@@ -51,16 +91,15 @@
         })
             .then(response => response.json())
             .then(res => {
-                updateProgressbar(res)
+                update(res);
             })
             .catch(err => {
                 console.log(err);
-                updateProgressbar("Unsuccessful request");
+                update();
             });
     }
 
     function excelEnvirocode() {
-        const status = document.getElementById('status');
         const file = document.getElementById('file').files[0];
         var formData = new FormData();
         formData.append('file', file);
@@ -68,23 +107,23 @@
             method: 'POST',
             body: formData
         })
-            .then(response => response.text())
+            .then(response => response.json())
             .then(res => {
-                status.innerHTML = res;
                 console.log(res);
+                update(res);
             })
             .catch(err => {
                 console.log(err);
             });
     }
 
-    function resetProgress() {
+    function cancelEnvirocode() {
         fetch("/api/excel/reset", {
             method: 'GET',
         })
             .catch(err => {
                 console.log(err);
-                updateProgressbar("Unsuccessful request");
+                update();
             });
     }
 
@@ -106,11 +145,10 @@
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
-                resetProgress();
             })
             .catch(err => {
                 console.log(err);
-                updateProgressbar("Unsuccessful request");
+                update();
             });
     }
 
@@ -142,34 +180,39 @@
             <label for="file" class="form-label">File</label>
             <input type="file" class="form-control" id="file" name="file">
         </div>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header">Result</div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col">Status: <p id="status">
-                </p>
-            </div>
-        </div>
-
         <div class="row justify-content-center">
             <div class="col text-center">
-                <button type="submit" class="btn btn-primary" onclick="excelEnvirocode();">Envirocode</button>
+                <button type="submit" class="btn btn-primary" id="submit"
+                    onclick="excelEnvirocode();">Envirocode</button>
             </div>
-            <div class="col-9 text-center">
+            <div class="col-8 text-center">
                 <div class="progress">
                     <div class="progress-bar bg-secondary" role="progressbar" style="width: 100%;" aria-valuenow="100"
                         aria-valuemin="0" aria-valuemax="100" id="progressbar">ready</div>
                 </div>
             </div>
             <div class="col text-center">
-                <button type="submit" class="btn btn-secondary" id="download" disabled
+                <button type="submit" class="btn btn-danger" id="reset" onclick="cancelEnvirocode();"
+                    disabled>Reset</button>
+            </div>
+            <div class="col text-center">
+                <button type="submit" class="btn btn-success" id="download" disabled
                     onclick="downloadExcel();">Download</button>
             </div>
         </div>
     </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">Status</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col" id="messages"></div>
+        </div>
+    </div>
+
+
+</div>
 </div>
 
 {% endblock %}

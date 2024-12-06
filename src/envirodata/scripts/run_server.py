@@ -10,9 +10,11 @@ from io import BytesIO
 import pytz
 from enum import Enum
 import math
+from pathlib import Path
+import threading
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, status, UploadFile, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, status, UploadFile, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import ORJSONResponse as JSONResponse
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -57,30 +59,45 @@ if end_date.tzinfo is None:
     end_date = end_date.replace(tzinfo=pytz.UTC)
 
 
-class ExcelJob:
+class ExcelJob(threading.Thread):
+
+    MAX_MSG_LENGTH = 3
+
     class Status(Enum):
         ERROR = "ERROR"
         PENDING = "PENDING"
         SUCCESS = "SUCCESS"
         STARTED = "STARTED"
 
-    def __init__(self):
-        self.reset()
+    def __init__(self, contents):
+        super().__init__()
+        self.killed = False
 
-    def reset(self):
+        self.messages = [""] * self.MAX_MSG_LENGTH
         self.status = ExcelJob.Status.PENDING
         self.percentDone = 0.0
 
         self.buffer = BytesIO()
+        self.contents = contents
 
-    def run(self, contents):
+    def kill(self):
+        self.killed = True
+
+    def add_message(self, msg):
+        self.messages.append(msg)
+        if len(self.messages) > self.MAX_MSG_LENGTH:
+            self.messages.pop(0)
+
+    def run(self):
         try:
             self.status = ExcelJob.Status.STARTED
 
-            data = BytesIO(contents)
+            data = BytesIO(self.contents)
             try:
                 df = pd.read_excel(data, usecols=["id", "date", "address"])
             except ValueError as exc:
+                self.status = ExcelJob.Status.ERROR
+                self.add_message(str(exc))
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
                 ) from exc
@@ -89,45 +106,64 @@ class ExcelJob:
 
             i = 0
             for idx, row in df.iterrows():
+                if self.killed:
+                    return
                 logger.info("Working on row %d of %d", i, len(df))
                 try:
                     date = row["date"].tz_localize(pytz.utc)
                     result[row["id"]] = _retrieve(date, row["address"])
+                    self.add_message(f"Successfully retrieved row {i} of {len(df)}")
                 except Exception as exc:
                     result[row["id"]] = {"failed": str(exc)}
+                    self.add_message(f"Error retrieving row {i} of {len(df)}")
                 i += 1
                 self.percentDone = math.floor(float(i) / len(df) * 100.0)
 
             flat = pd.DataFrame()
             for id, envrow in result.items():
+                if self.killed:
+                    return
                 try:
                     env = {"id": id}
                     for service, data in envrow["environment"].items():
                         env[service] = data["values"]
 
                     env_pd = pd.json_normalize(env)
+                    self.add_message(f"Successfully converted row {i} of {len(df)}")
                 except KeyError:  # if getting env failed previously, make an empty row
                     env_pd = pd.DataFrame.from_dict({0: {"id": id}}, orient="index")
+                    self.add_message(f"Ignoring row {i} of {len(df)}")
 
                 flat = pd.concat([flat, env_pd])
 
+            self.add_message("Writing to output file")
             self.buffer = BytesIO()
             with pd.ExcelWriter(self.buffer) as writer:
                 flat.to_excel(writer, index=False)
 
+            self.add_message("Done")
             self.percentDone = 0.0
 
             self.status = ExcelJob.Status.SUCCESS
-        except Exception as e:
+        except Exception:
+            self.add_message("Failed")
             self.status = ExcelJob.Status.ERROR
 
+    def get_buffer(self):
+        return self.buffer
+
     def get_state(self):
-        if self.status == ExcelJob.Status.STARTED:
-            return self.percentDone
-        return self.status
+        return {
+            "state": self.status,
+            "messages": self.messages,
+            "percent": self.percentDone,
+        }
 
 
-excelJob = ExcelJob()
+# there is only one...
+excel_task_name = "EXCEL"
+
+running_threads: dict[str, ExcelJob] = {}
 
 
 def _get_metadata(date: datetime.datetime) -> dict[str, Any]:
@@ -279,35 +315,68 @@ def main() -> None:
         return JSONResponse(json_result)
 
     @app.post("/api/excel/submit", status_code=status.HTTP_201_CREATED)
-    async def api_excel_submit(file: UploadFile, background_tasks: BackgroundTasks):
+    def api_excel_submit(file: UploadFile):
 
-        if excelJob.status == ExcelJob.Status.STARTED:
-            return {"message": "Job is running"}
+        if excel_task_name in running_threads:
+            return {"message": "Job is already running"}
+
+        if not file:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="No file selected"
+            )
 
         contents = file.file.read()
-        background_tasks.add_task(excelJob.run, contents)
+
+        running_threads[excel_task_name] = ExcelJob(contents)
+        running_threads[excel_task_name].start()
+
         return {"message": "Job created"}
 
     @app.get("/api/excel/status", status_code=status.HTTP_200_OK)
-    def api_excel_status():
-        return excelJob.get_state()
+    def api_excel_status() -> JSONResponse:
+        state = {
+            "state": ExcelJob.Status.PENDING,
+            "messages": ["", "", ""],
+            "percent": 0.0,
+        }
+        if excel_task_name in running_threads:
+            state = running_threads[excel_task_name].get_state()
+        return JSONResponse(state)
 
     @app.get("/api/excel/get")
     def api_excel_get() -> StreamingResponse:
-        if not excelJob.get_state() == excelJob.Status.SUCCESS:
+        if excel_task_name not in running_threads:
             raise HTTPException(
-                status_code=status.HTTP_425_TOO_EARLY, detail="Result not ready yet!"
+                status_code=status.HTTP_425_TOO_EARLY,
+                detail="Processing has not started yet!",
+            )
+        jobstate = running_threads[excel_task_name].get_state()
+        if not jobstate["state"] == ExcelJob.Status.SUCCESS:
+            raise HTTPException(
+                status_code=status.HTTP_425_TOO_EARLY, detail="Result not ready (yet)!"
             )
 
+        buffer = running_threads[excel_task_name].get_buffer()
         return StreamingResponse(
-            BytesIO(excelJob.buffer.getvalue()),
+            BytesIO(buffer.getvalue()),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={"Content-Disposition": "attachment; filename=environment.xlsx"},
         )
 
     @app.get("/api/excel/reset", status_code=status.HTTP_200_OK)
     def api_excel_reset():
-        excelJob.reset()
+        # no thread to kill anyway
+        if excel_task_name not in running_threads:
+            return True
+
+        running_threads[excel_task_name].kill()
+        running_threads[excel_task_name].join()
+
+        if running_threads[excel_task_name].is_alive():
+            raise IOError("Excel thread still alive!")
+
+        del running_threads[excel_task_name]
+
         return True
 
     uvicorn_config = uvicorn.Config(app, **config["uvicorn"])
