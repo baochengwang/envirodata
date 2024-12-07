@@ -5,6 +5,8 @@ import copy
 
 import numpy as np
 
+MAX_TIMEDELTA_FOR_CURRENT = datetime.timedelta(hours=1)
+
 
 @dataclass
 class Statistic:
@@ -103,11 +105,13 @@ def amplitude(values):
     return np.nanmax(values) - np.nanmin(values)
 
 
+# NOTE: begin and end times are both _added_ to the date, hence
+# a begin before the actual date is to be given a _negative_ timedelta!
 AvailableStatistics = [
     Statistic(
         "current",
-        datetime.timedelta(days=0),
-        datetime.timedelta(days=0),
+        -MAX_TIMEDELTA_FOR_CURRENT / 2.0,
+        MAX_TIMEDELTA_FOR_CURRENT / 2.0,
         lambda times, values: values[0],
     ),
     Statistic(
