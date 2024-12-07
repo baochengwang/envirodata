@@ -150,30 +150,3 @@ class Getter(BaseGetter):
                         logger.debug("Could not cast result for %s as float", variable)
 
         return times, result
-
-    def _get(
-        self,
-        date: datetime.datetime,
-        longitude: float,
-        latitude: float,
-        variable: str,
-    ) -> tuple[datetime.datetime, float]:
-        """Get value for variable out of cache DB
-
-        :param date: Date to retrieve
-        :type date: datetime.datetime
-        :param longitude: Geographical longitude
-        :type longitude: float
-        :param latitude: Geographical latitude
-        :type latitude: float
-        :param variable: Variable to retrieve
-        :type variable: str
-        :return: Value for variable at given point in time and space.
-        :rtype: float
-        """
-        times, data = self._get_range(date, date, longitude, latitude, variable)
-
-        if len(data) > 0:
-            return times[0], data[0]
-        else:
-            return date, np.nan

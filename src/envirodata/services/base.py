@@ -95,8 +95,8 @@ class BaseGetter(metaclass=abc.ABCMeta):
         is_valid_subclass = True
 
         # need a _get method!
-        is_valid_subclass &= hasattr(subclass, "_get")
-        is_valid_subclass &= callable(subclass._get)
+        is_valid_subclass &= hasattr(subclass, "_get_range")
+        is_valid_subclass &= callable(subclass._get_range)
         is_valid_subclass &= NotImplemented
 
         is_valid_subclass &= hasattr(subclass, "time_resolution")
@@ -110,29 +110,6 @@ class BaseGetter(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _get(
-        self,
-        date: datetime.datetime,
-        longitude: float,
-        latitude: float,
-        variable: str,
-    ) -> tuple[datetime.datetime, float]:
-        """Get value for variable out of the (cached) input dataset
-        for a given place in time and space (internal)
-
-        :param date: Date to retrieve
-        :type date: datetime.datetime
-        :param longitude: Geographical longitude
-        :type longitude: float
-        :param latitude: Geographical latitude
-        :type latitude: float
-        :param variable: Variable to retrieve
-        :type variable: str
-        :return: Value for variable at given point in time and space.
-        :rtype: float
-        """
-        raise NotImplementedError
-
     def _get_range(
         self,
         start_date: datetime.datetime,
@@ -157,19 +134,7 @@ class BaseGetter(metaclass=abc.ABCMeta):
         :return: Value for variable at given point in time and space.
         :rtype: float
         """
-        values: list[float] = []
-        times: list[datetime.datetime] = []
-        current_date = start_date
-
-        while current_date <= end_date:
-            new_times, new_values = self._get(
-                current_date, longitude, latitude, variable
-            )
-            values.append(new_values)
-            times.append(new_times)
-            current_date += self.time_resolution
-
-        return times, values
+        raise NotImplementedError
 
     def _calc_statistic(
         self,
@@ -305,8 +270,6 @@ class BaseGetter(metaclass=abc.ABCMeta):
 
         times = np.array(_times)
         values = np.array(_values)
-
-        logger.debug(variable)
 
         # get all statistics (the current value is also a "statistic")
         for statistic in variable.statistics:

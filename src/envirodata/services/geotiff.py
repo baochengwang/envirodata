@@ -92,13 +92,14 @@ class Getter(BaseGetter):
         """Time resolution of the dataset."""
         return datetime.timedelta(hours=1)
 
-    def _get(
+    def _get_range(
         self,
-        date: datetime.datetime,
+        start_date: datetime.datetime,
+        end_date: datetime.datetime,
         longitude: float,
         latitude: float,
         variable: str,
-    ) -> tuple[datetime.datetime, float]:
+    ) -> tuple[list[datetime.datetime], list[float]]:
         """Get value for variable out of cached NetCDF4 file
 
         :param date: Date to retrieve
@@ -140,4 +141,4 @@ class Getter(BaseGetter):
             logger.debug("Valid sampling for %s!", variable)
             value = float(self.data[variable][1][row, col])
 
-        return date, value
+        return [start_date], [value]
