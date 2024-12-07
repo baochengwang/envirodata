@@ -29,7 +29,9 @@ COPY config.yaml ./config.yaml
 COPY services ./services
 COPY static ./static
 COPY templates ./templates
-RUN touch README.md
+COPY README.md ./README.md
+COPY INSTALL.md ./INSTALL.md
+COPY LICENSE ./LICENSE
 
 RUN poetry install --no-interaction --no-ansi && rm -rf $POETRY_CACHE_DIR
 
