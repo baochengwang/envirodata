@@ -214,7 +214,7 @@ def _retrieve(
 
     # (1) geocode address
     try:
-        longitude, latitude = geocoder.geocode(address)
+        longitude, latitude, address_found = geocoder.geocode(address)
     except IOError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -223,6 +223,7 @@ def _retrieve(
 
     geocoding = {
         "address": address,
+        "address_found": address_found,
         "location": {"longitude": longitude, "latitude": latitude},
     }
 
@@ -300,7 +301,11 @@ def main() -> None:
 
         return templates.TemplateResponse(
             "result_table.html",
-            context={"request": request, "environment": result["environment"]},
+            context={
+                "request": request,
+                "geocoding": result["geocoding"],
+                "environment": result["environment"],
+            },
         )
 
     @app.get("/api/simple")

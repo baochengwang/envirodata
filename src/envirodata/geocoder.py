@@ -44,15 +44,15 @@ class Geocoder:
     def geocode(
         self,
         address: str,
-    ) -> Tuple[float, float]:
+    ) -> Tuple[float, float, str]:
         """Geocode an address and return coordinates
 
         :param address: Address string (more or less standardized)
         :type address: str
         :raises IOError: JSON response is malformed
         :raises IOError: Address could not be geocoded
-        :return: Coordinates (longitude, latitude) of the geocoded address
-        :rtype: float, float
+        :return: Coordinates (longitude, latitude) of the geocoded address, and address found
+        :rtype: float, float, str
         """
         response = requests.get(self.url, params={"q": address}, timeout=10)
 
@@ -66,6 +66,10 @@ class Geocoder:
         if len(data) > 0:
             # probably have to sort by place_rank
             best_match = data[0]
-            return float(best_match["lon"]), float(best_match["lat"])
+            return (
+                float(best_match["lon"]),
+                float(best_match["lat"]),
+                best_match["display_name"],
+            )
         else:
             raise IOError(f"Could not geocode address {address}")

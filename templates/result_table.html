@@ -1,5 +1,9 @@
 <div class="card mb-3">
     <div class="card-header">
+        <p><strong>Results for:</strong><br />{{ geocoding.address_found }}<br />({{
+            geocoding.location.latitude|round(6, 'common') }} N,
+            {{
+            geocoding.location.longitude|round(6, 'common') }} E)</p>
         <ul class="nav nav-tabs card-header-tabs">
             {% for sname, service in environment.items() -%}
             <li class="nav-item">
