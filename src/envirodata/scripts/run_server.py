@@ -24,6 +24,7 @@ from fastapi.templating import Jinja2Templates
 import pandas as pd
 import markdown
 import uvicorn.logging
+from dateutil import parser as dparser
 
 from envirodata.geocoder import Geocoder
 from envirodata.environment import Environment
@@ -110,7 +111,13 @@ class ExcelJob(threading.Thread):
                     return
                 logger.info("Working on row %d of %d", i, len(df))
                 try:
-                    date = row["date"].tz_localize(pytz.utc)
+                    _date = row["date"]
+                    if isinstance(_date, str):
+                        _date = dparser.parse(row["date"])
+                    try:
+                        date = _date.astimezone(pytz.utc)
+                    except:
+                        date = _date.tz_localize(pytz.utc)
                     result[row["id"]] = _retrieve(date, row["address"])
                     self.add_message(f"Successfully retrieved row {i} of {len(df)}")
                 except Exception as exc:
