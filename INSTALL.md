@@ -4,7 +4,7 @@
 
 ## Setup and preparation
 
- 1) Install [docker](https://www.docker.com), e.g. follow [these instructions](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository) for Ubunutu. On Linux, all `docker` will need to be `sudo'ed` unless you are root.
+ 1) Install [docker](https://www.docker.com), e.g. follow [these instructions](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository) for Ubuntu. On Linux, all `docker` will need to be `sudo'ed` unless you are root.
 
  2) Clone envirodata repo (need username or deploy token - contact us):
 
