@@ -61,7 +61,7 @@ if end_date.tzinfo is None:
 
 class ExcelJob(threading.Thread):
 
-    MAX_MSG_LENGTH = 3
+    MAX_MSG_LENGTH = 100
 
     class Status(Enum):
         ERROR = "ERROR"
@@ -73,7 +73,7 @@ class ExcelJob(threading.Thread):
         super().__init__()
         self.killed = False
 
-        self.messages = [""] * self.MAX_MSG_LENGTH
+        self.messages = []
         self.status = ExcelJob.Status.PENDING
         self.percentDone = 0.0
 
@@ -104,7 +104,7 @@ class ExcelJob(threading.Thread):
 
             result = {}
 
-            i = 0
+            i = 1
             for idx, row in df.iterrows():
                 if self.killed:
                     return
@@ -115,10 +115,11 @@ class ExcelJob(threading.Thread):
                     self.add_message(f"Successfully retrieved row {i} of {len(df)}")
                 except Exception as exc:
                     result[row["id"]] = {"failed": str(exc)}
-                    self.add_message(f"Error retrieving row {i} of {len(df)}")
+                    self.add_message(f"Error retrieving row {i} of {len(df)}: {exc}")
                 i += 1
                 self.percentDone = math.floor(float(i) / len(df) * 100.0)
 
+            i = 1
             flat = pd.DataFrame()
             for id, envrow in result.items():
                 if self.killed:
@@ -134,6 +135,7 @@ class ExcelJob(threading.Thread):
                     env_pd = pd.DataFrame.from_dict({0: {"id": id}}, orient="index")
                     self.add_message(f"Ignoring row {i} of {len(df)}")
 
+                i += 1
                 flat = pd.concat([flat, env_pd])
 
             self.add_message("Writing to output file")
@@ -153,11 +155,13 @@ class ExcelJob(threading.Thread):
         return self.buffer
 
     def get_state(self):
-        return {
+        state = {
             "state": self.status,
             "messages": self.messages,
             "percent": self.percentDone,
         }
+        self.messages = []
+        return state
 
 
 # there is only one...
@@ -336,7 +340,7 @@ def main() -> None:
     def api_excel_status() -> JSONResponse:
         state = {
             "state": ExcelJob.Status.PENDING,
-            "messages": ["", "", ""],
+            "messages": [],
             "percent": 0.0,
         }
         if excel_task_name in running_threads:

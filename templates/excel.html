@@ -6,10 +6,10 @@
 
     oldColor = "bg-secondary";
 
-    function update(message) {
-        state = "state" in message ? message["state"] : "PENDING"
-        messages = "messages" in message ? message["messages"] : ["", "", ""]
-        percent = "percent" in message ? message["percent"] : 0.0
+    function update(message = {}) {
+        state = "state" in message ? message["state"] : "PENDING";
+        messages = "messages" in message ? message["messages"] : [];
+        percent = "percent" in message ? message["percent"] : 0.0;
 
         updateProgressbar(state, percent);
         updateButtons(state, percent);
@@ -17,9 +17,18 @@
     }
 
     function updateMessages(messages) {
-        const messageBoard = document.getElementById('messages');
-        console.log(messages);
-        messageBoard.innerHTML = messages.join("<br />");
+        if (messages.length > 0) {
+            console.log("Updating messages:");
+            console.log(messages);
+            if (messages.length == 1) {
+                messageHTML = messages[0] + "<br />";
+            } else {
+                messageHTML = messages.join("<br />")
+            }
+            console.log(messageHTML);
+            const messageBoard = document.getElementById('messages');
+            messageBoard.insertAdjacentHTML("beforeend", messageHTML);
+        }
     }
 
     function updateProgressbar(state, percent) {
@@ -121,9 +130,14 @@
         fetch("/api/excel/reset", {
             method: 'GET',
         })
+            .then(response => {
+                update();
+                const messageBoard = document.getElementById('messages');
+                messageBoard.innerHTML = "";
+
+            })
             .catch(err => {
                 console.log(err);
-                update();
             });
     }
 
@@ -205,10 +219,9 @@
 
 <div class="card mb-3">
     <div class="card-header">Status</div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col" id="messages"></div>
-        </div>
+    <div class="card-body overflow-auto"
+        style="height:120px; max-height: 100%; display: flex; flex-direction: column-reverse;">
+        <div id="messages"></div>
     </div>
 </div>
 
