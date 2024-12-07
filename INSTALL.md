@@ -1,4 +1,8 @@
-## Setup (administrator)
+## Configuration
+
+`envirodata` is configured through one configuration file, `config.yaml`, in `WORKPATH`.
+
+## Setup and preparation
 
  1) Install [docker](https://www.docker.com), e.g. follow [these instructions](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository) for Ubunutu. On Linux, all `docker` will need to be `sudo'ed` unless you are root.
 
@@ -37,8 +41,3 @@ This might well take several hours up to a day.
 The Envirodata service now runs as a docker container. You can access the user interface in your browser at
 
 [localhost:8000](http://localhost:8000/)
-
-## Configuration
-
-`envirodata` is configured through one configuration file, `config.yaml`, in `WORKPATH`.
-
