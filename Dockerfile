@@ -27,6 +27,8 @@ COPY pyproject.toml ./
 COPY src ./src
 COPY config.yaml ./config.yaml
 COPY services ./services
+COPY static ./static
+COPY templates ./templates
 RUN touch README.md
 
 RUN poetry install --no-interaction --no-ansi && rm -rf $POETRY_CACHE_DIR
