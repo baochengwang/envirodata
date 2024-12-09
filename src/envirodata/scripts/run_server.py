@@ -256,7 +256,7 @@ def main() -> None:
     def home(request: Request):
         with open(README_md_fpath, "r") as f:
             readme_str = f.read()
-        readme_html = markdown.markdown(readme_str)
+        readme_html = markdown.markdown(readme_str, extensions=["tables"])
         return templates.TemplateResponse(
             "home.html", context={"request": request, "readme": readme_html}
         )
@@ -265,7 +265,7 @@ def main() -> None:
     def install(request: Request):
         with open(INSTALL_md_fpath, "r") as f:
             install_str = f.read()
-        install_html = markdown.markdown(install_str)
+        install_html = markdown.markdown(install_str, extensions=["tables"])
         return templates.TemplateResponse(
             "install.html", context={"request": request, "install": install_html}
         )
