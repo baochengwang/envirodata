@@ -256,7 +256,13 @@ def main() -> None:
     def home(request: Request):
         with open(README_md_fpath, "r") as f:
             readme_str = f.read()
-        readme_html = markdown.markdown(readme_str, extensions=["tables"])
+        readme_html = markdown.markdown(
+            readme_str, extensions=["tables", "fenced_code", "attr_list"]
+        )
+        # super-ugly hack to make tables readable
+        readme_html = readme_html.replace(
+            "<table>", '<table class="table table-striped">'
+        )
         return templates.TemplateResponse(
             "home.html", context={"request": request, "readme": readme_html}
         )
@@ -265,7 +271,13 @@ def main() -> None:
     def install(request: Request):
         with open(INSTALL_md_fpath, "r") as f:
             install_str = f.read()
-        install_html = markdown.markdown(install_str, extensions=["tables"])
+        install_html = markdown.markdown(
+            install_str, extensions=["tables", "fenced_code", "attr_list"]
+        )
+        # super-ugly hack to make tables readable
+        install_html = install_html.replace(
+            "<table>", '<table class="table table-striped">'
+        )
         return templates.TemplateResponse(
             "install.html", context={"request": request, "install": install_html}
         )

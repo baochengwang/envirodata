@@ -1,4 +1,4 @@
-# EnviroData - envirocoding for the masses!
+# EnviroData - envirocoding for the masses
 
 > *envirocoding:* associating a point in time and space with information on the environment that was present.
 
@@ -6,7 +6,11 @@
 
 Understanding impacts of the environment on health requires estimation of the personal exposure of each individual (patient, cohort participant, ...) to certain environmental factors, and finding associations with health outcomes.
 
-Environmental factors (e.g., air temperature, air quality, distance to green space, mean household income) vary in space and time, they are spatiotemporal fields. Often, this variation happens on very small spatial and temporal scales. *Example 1: if you investigate health effects of ambient noise, it makes a large difference if you live right next to a motorway, or one block away.* *Example 2: a thunderstorm passes within half an hour, might lead to an acute asthma attack due to stirred up dust.*
+Environmental factors (e.g., air temperature, air quality, distance to green space, mean household income) vary in space and time, they are spatiotemporal fields. Often, this variation happens on very small spatial and temporal scales.
+
+*Example: if you investigate health effects of ambient noise, it makes a large difference if a person lives right next to a motorway, or one block (25 m) away.*
+
+*Example: a thunderstorm passes within half an hour, might lead to an acute asthma attack due to stirred up dust.*
 
 Epidemiological studies on environmental influences face a problem: location (be it residential address or movement patterns) is personal identifiable information, and needs to be protected. Especially when working in a health context.
 
@@ -78,6 +82,7 @@ Offline geocoding using the [Nominatim](https://nominatim.org) geocoder based on
 Definition of methods and classes to provide environmental factor data. An way for users to add new datasets.
 
 Examples implemented:
+
 - station data of the German Weather Service
 - sociodemographic information from the Federal Statistical Office of Germany Census
 - model results from the Copernicus Atmospheric Monitoring Service
@@ -87,6 +92,7 @@ Examples implemented:
 Definition of typically used temporal and spatial statistics. A way to define new statistical aggregations for users.
 
 Examples:
+
 - current
 - daily minimum, daily mean, daily max
 - 7 day daily maximum
@@ -94,11 +100,11 @@ Examples:
 
 ### API and web interface
 
-Methods to retrieve individual exposure information. Implemented is a web interface (standard at [http://localhost:8000](http://localhost:8000)) and a REST-API.
+Methods to retrieve individual exposure information. Implemented is a web interface (by default at [http://localhost:8000](http://localhost:8000)) and a REST-API.
 
 Example of a REST-API call to envirocode our office on January 1st, 2020:
 
-```
+```bash
 curl -X 'GET' \
   'http://localhost:8000/api/simple?date=2020-01-01T12%3A00%3A00&address=Werner-von-Siemens%20Str.%206%2C%2086159%20Augsburg' \
   -H 'accept: application/json'
@@ -106,7 +112,7 @@ curl -X 'GET' \
 
 Result (abbreviated):
 
-```
+```json
 {
   "metadata": {
     "package_version": "0.1.0",
