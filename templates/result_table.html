@@ -44,7 +44,7 @@
                                         {% for statname, statvalue in variable.items() -%}
                                         <tr>
                                             <td>{{ statname }}</td>
-                                            <td>{{ statvalue }}</td>
+                                            <td>{{ statvalue|round(2, 'common') }}</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
