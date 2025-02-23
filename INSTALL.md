@@ -11,6 +11,21 @@ It relies on two external pieces of software which are also provided as Docker c
 
 1. Install [docker](https://www.docker.com), e.g. follow [these instructions](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository) for Ubuntu. On Linux, all `docker` will need to be `sudo'ed` unless you are root.
 
+Um eine stabile und sichere Umgebung zu haben, verwenden wir die Docker aus dem Ubuntu-Repository. #Bao 
+
+```
+sudo rm sources.list.d/docker.list
+sudo apt update
+for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do sudo apt-get remove $pkg; 
+
+sudo apt autoremove
+sudo apt-get remove --purge docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo apt install docker.io
+sudo apt update
+sudo apt upgrade
+```
+
 2. Clone envirodata repo (need username or deploy token - contact us):
 
    `git clone https://git.rz.uni-augsburg.de/mmbees-git/envirodata.git`
